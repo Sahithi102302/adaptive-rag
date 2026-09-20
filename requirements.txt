@@ -1,0 +1,7 @@
+# AdaptiveRAG
+# Current dependencies for data ingestion and HotpotQA corpus construction.
+
+datasets==5.0.1
+pyarrow==21.0.0
+pandas==3.0.6
+numpy==2.4.6

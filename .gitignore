@@ -1,0 +1,107 @@
+# ============================================================
+# AdaptiveRAG - Git Ignore
+# ============================================================
+
+# ----------------------------
+# Python
+# ----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# ----------------------------
+# Virtual environments
+# ----------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# ----------------------------
+# Python tooling / test caches
+# ----------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ----------------------------
+# IDE / editor files
+# ----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ----------------------------
+# Operating system files
+# ----------------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------------
+# Environment variables / secrets
+# ----------------------------
+.env
+.env.*
+!.env.example
+
+# ----------------------------
+# Hugging Face caches
+# ----------------------------
+.cache/
+huggingface/
+hf_cache/
+
+# ----------------------------
+# Generated / downloaded datasets
+# ----------------------------
+data/raw/*
+data/processed/*
+data/evaluation/*
+
+# Keep directory structure if placeholder files are added later
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/evaluation/.gitkeep
+
+# Demo data is intentionally version controlled
+!data/demo/
+!data/demo/**
+
+# ----------------------------
+# Retrieval indexes / embeddings
+# ----------------------------
+*.faiss
+*.index
+*.npy
+*.npz
+embeddings/
+indexes/
+
+# ----------------------------
+# Model artifacts
+# ----------------------------
+models/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# ----------------------------
+# Experiment outputs
+# ----------------------------
+results/*
+experiments/output/*
+logs/
+
+# ----------------------------
+# Temporary files
+# ----------------------------
+tmp/
+temp/
+*.tmp

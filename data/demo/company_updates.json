@@ -1,0 +1,21 @@
+[
+  {
+    "id": "company_update_2024",
+    "text": "John Lee became CEO of Company X in 2024.",
+    "metadata": {
+      "company": "Company X",
+      "year": 2024,
+      "document_type": "company_update"
+    }
+  },
+  {
+    "id": "company_revenue_2025",
+    "text": "Company X reported revenue of $12 billion in Q4 2025.",
+    "metadata": {
+      "company": "Company X",
+      "year": 2025,
+      "quarter": "Q4",
+      "document_type": "financial_report"
+    }
+  }
+]
