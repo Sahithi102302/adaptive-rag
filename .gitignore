@@ -79,8 +79,8 @@ data/evaluation/*
 *.index
 *.npy
 *.npz
-embeddings/
-indexes/
+/embeddings/
+/indexes/
 
 # ----------------------------
 # Model artifacts

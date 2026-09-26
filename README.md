@@ -1,52 +1,60 @@
 # AdaptiveRAG
 
-## Failure-Aware Retrieval and Self-Correcting Generation
+## Failure-Aware Retrieval Diagnosis and Targeted Recovery
 
-AdaptiveRAG is a research-oriented Retrieval-Augmented Generation (RAG) project investigating whether a RAG system can identify **why retrieval failed** and dynamically select an appropriate recovery strategy instead of applying the same retrieval pipeline to every query.
+AdaptiveRAG is a research-oriented Retrieval-Augmented Generation (RAG) project investigating whether a RAG system can identify **why retrieval failed** and select an appropriate recovery strategy instead of applying the same corrective action to every query.
+
+The project is motivated by a simple observation:
+
+> **Semantic relevance is not the same as evidence sufficiency.**
+
+A retriever can return highly relevant passages while still failing to retrieve all of the evidence required to answer a question correctly.
 
 The central research question is:
 
-> **Can a RAG system identify the specific reason retrieval failed and dynamically select an appropriate recovery strategy, improving answer quality and faithfulness without excessive latency or cost?**
+> **Does explicit failure diagnosis lead to better recovery decisions than static RAG or generic corrective retrieval?**
 
-This repository is being developed incrementally. Each major component is implemented, inspected, and validated before the next stage is added.
+The repository is being developed incrementally. Each component is implemented, validated, and analyzed before the next stage is introduced.
 
-> **Current status:** The data ingestion, baseline chunking, HotpotQA corpus construction, gold-evidence mapping, and corpus-integrity validation stages are complete. Adaptive failure diagnosis and recovery are planned but are not yet implemented.
+> **Current status:** Corpus engineering, evidence-aware sentence chunking, dense retrieval, BM25 sparse retrieval, hybrid Reciprocal Rank Fusion, cross-encoder reranking, supporting-fact retrieval evaluation, and offline oracle failure diagnosis are implemented. Adaptive runtime diagnosis, targeted recovery, post-recovery verification, generation, and abstention remain future work.
 
 ---
 
 ## Table of Contents
 
-* [Motivation](#motivation)
-* [Research Question](#research-question)
-* [Core Idea](#core-idea)
-* [Failure Taxonomy](#failure-taxonomy)
-* [Planned Recovery Strategies](#planned-recovery-strategies)
-* [Research Hypotheses](#research-hypotheses)
-* [Baseline Progression](#baseline-progression)
-* [Dataset Strategy](#dataset-strategy)
-* [Why HotpotQA](#why-hotpotqa)
-* [HotpotQA Corpus Engineering](#hotpotqa-corpus-engineering)
-* [Dataset Integrity Findings](#dataset-integrity-findings)
-* [Current Implementation](#current-implementation)
-* [Repository Structure](#repository-structure)
-* [Installation](#installation)
-* [Running the Current Pipeline](#running-the-current-pipeline)
-* [Planned Evaluation](#planned-evaluation)
-* [Roadmap](#roadmap)
-* [Research Engineering Principles](#research-engineering-principles)
-* [Author](#author)
+- [Motivation](#motivation)
+- [Research Question](#research-question)
+- [Core Architecture](#core-architecture)
+- [Failure Taxonomy](#failure-taxonomy)
+- [Dataset Strategy](#dataset-strategy)
+- [HotpotQA Corpus Engineering](#hotpotqa-corpus-engineering)
+- [Evidence-Aware Sentence Chunking](#evidence-aware-sentence-chunking)
+- [Retrieval Architecture](#retrieval-architecture)
+- [Development Evaluation](#development-evaluation)
+- [Dense and Sparse Complementarity](#dense-and-sparse-complementarity)
+- [Hybrid Candidate-Loss Analysis](#hybrid-candidate-loss-analysis)
+- [Cross-Encoder Repair Analysis](#cross-encoder-repair-analysis)
+- [Oracle Failure Diagnosis](#oracle-failure-diagnosis)
+- [Current Findings](#current-findings)
+- [Current Limitations](#current-limitations)
+- [Repository Structure](#repository-structure)
+- [Installation](#installation)
+- [Running the Pipeline](#running-the-pipeline)
+- [Roadmap](#roadmap)
+- [Research Engineering Principles](#research-engineering-principles)
+- [Author](#author)
 
 ---
 
-## Motivation
+# Motivation
 
-A conventional RAG pipeline usually follows a static workflow:
+A conventional RAG system often follows a static pipeline:
 
 ```text
 User Query
     |
     v
-Retrieve Top-K Documents
+Retrieve Top-K
     |
     v
 Construct Context
@@ -55,85 +63,90 @@ Construct Context
 Generate Answer
 ```
 
-This architecture assumes that retrieval has provided useful evidence.
+This assumes that retrieval produced sufficient evidence.
 
-In practice, retrieval can fail in several fundamentally different ways.
+In practice, retrieval can fail in fundamentally different ways:
+
+- the wrong document may be retrieved,
+- the correct document may be retrieved but the wrong passage selected,
+- only part of a multi-hop evidence chain may be recovered,
+- information may be outdated,
+- retrieved sources may conflict,
+- the query may be ambiguous,
+- or generation may introduce claims unsupported by retrieved evidence.
+
+These failures should not necessarily trigger the same intervention.
 
 For example:
 
-* the retriever may select the wrong document,
-* the correct document may be retrieved but the wrong passage selected,
-* some required evidence may be missing,
-* the available information may be outdated,
-* multiple sources may conflict,
-* the query itself may be ambiguous,
-* or the language model may make an inference that is unsupported by the retrieved evidence.
+```text
+Wrong document
+    -> query rewriting / retrieval change
 
-These failures should not necessarily trigger the same response.
+Correct document, wrong passage
+    -> passage recovery / context expansion
 
-A system suffering from an ambiguous query may need clarification.
+Missing second-hop evidence
+    -> query decomposition / multi-hop retrieval
 
-A system missing one part of a multi-hop question may need additional retrieval.
+Ambiguous query
+    -> clarification
 
-A system retrieving the correct document but the wrong passage may need context expansion.
+Conflicting evidence
+    -> source comparison / verification
 
-A system facing outdated information may need temporal filtering.
+Insufficient verified evidence
+    -> abstention
+```
 
-A system with insufficient evidence may need to abstain rather than generate an unsupported answer.
-
-AdaptiveRAG investigates whether retrieval failures can be explicitly diagnosed and routed to targeted recovery strategies.
+AdaptiveRAG investigates whether explicitly diagnosing the failure mechanism can support more appropriate recovery decisions.
 
 ---
 
-## Research Question
+# Research Question
 
 The primary research question is:
 
-> **Can a RAG system identify the specific reason retrieval failed and dynamically select an appropriate recovery strategy, improving answer quality and faithfulness without excessive latency or cost?**
+> **Does explicit failure diagnosis lead to better recovery decisions than static RAG or generic corrective retrieval?**
 
-The project separates three related but different problems:
+The project separates four related problems:
 
 ```text
 Detection
     |
-    | Something is wrong.
+    | Something appears wrong.
     v
 Diagnosis
     |
-    | What specifically went wrong?
+    | What specifically failed?
     v
 Recovery
     |
-    | What action should be taken?
+    | Which intervention should be used?
     v
 Verification
+    |
+    | Did the intervention actually repair the evidence?
+    v
+Generate / Recover Again / Abstain
 ```
 
-This distinction is central to the project.
+This separation is important.
 
-A system may successfully detect weak evidence without knowing why the evidence is weak.
+Detecting weak evidence does not automatically reveal why the evidence is weak.
 
-Similarly, correctly diagnosing a failure does not automatically imply that the selected recovery action will solve it.
+Likewise, correctly diagnosing a failure does not guarantee that a chosen recovery action will repair it.
 
-AdaptiveRAG therefore studies these stages separately.
+The project therefore evaluates these stages separately.
 
 ---
 
-## Core Idea
+# Core Architecture
 
-A key principle behind the project is:
-
-> **Semantic similarity is not the same as evidence sufficiency.**
-
-A retrieved passage can be semantically similar to a query while still failing to contain the evidence necessary to answer it.
-
-The planned AdaptiveRAG architecture is:
+The intended end-to-end architecture is:
 
 ```text
 User Query
-    |
-    v
-Query Processing
     |
     v
 Initial Retrieval
@@ -144,10 +157,10 @@ Evidence Inspection
     v
 Is the evidence sufficient?
     |
-    +-------------------- Yes --------------------+
-    |                                             |
-    No                                            v
-    |                                      Generate Answer
+    +---------------- Yes ----------------+
+    |                                     |
+    No                                    v
+    |                               Generate Answer
     v
 Failure Diagnosis
     |
@@ -155,405 +168,166 @@ Failure Diagnosis
 Recovery Router
     |
     v
-Select Recovery Strategy
+Targeted Intervention
     |
     v
 Re-retrieval
     |
     v
-Evidence Verification
+Post-Recovery Verification
     |
-    +-------------------- Sufficient ------------> Generate Answer
+    +------------- Sufficient -----------> Generate
     |
-    +-------------------- Insufficient
-                              |
-                              v
-                     Recovery budget remaining?
-                              |
-                       +------+------+
-                       |             |
-                      Yes            No
-                       |             |
-                       v             v
-                 Recover Again     Abstain
+    +------------- Insufficient
+                        |
+                        v
+                Recovery budget?
+                   /        \
+                 Yes        No
+                  |          |
+                  v          v
+             Recover Again  Abstain
 ```
 
 The goal is not simply to add more retrieval components.
 
-The research question is whether the system can decide **when** recovery is necessary and **which recovery action** is appropriate.
+The goal is to study whether the system can determine:
+
+1. when recovery is necessary,
+2. why the current evidence is insufficient,
+3. which recovery action is appropriate,
+4. and whether that recovery actually fixed the problem.
 
 ---
 
-## Failure Taxonomy
+# Failure Taxonomy
 
-AdaptiveRAG is designed to study several categories of retrieval and generation failure.
+The project defines semantic failure states separately from the raw signals used to detect them.
 
-### 1. Wrong Document
+Current failure types include:
 
-The retrieved documents are related to the query but do not contain the required evidence.
+```text
+SUFFICIENT_EVIDENCE
+SEVERE_RETRIEVAL_FAILURE
+DOCUMENT_SELECTION_FAILURE
+PASSAGE_SELECTION_FAILURE
+EVIDENCE_COVERAGE_FAILURE
+AMBIGUOUS_QUERY
+CONFLICTING_EVIDENCE
+TEMPORAL_FAILURE
+UNSUPPORTED_INFERENCE
+UNKNOWN
+```
+
+They are grouped into broader failure families:
+
+```text
+Retrieval
+Evidence
+Generation
+None
+```
+
+## Retrieval-oriented failures
+
+### Document Selection Failure
+
+The required source document is not successfully retrieved.
 
 Potential recovery:
 
-* query rewriting,
-* hybrid retrieval,
-* reranking,
-* metadata filtering.
+- query rewriting,
+- retrieval-strategy change,
+- hybrid retrieval,
+- query decomposition,
+- metadata filtering.
 
-### 2. Correct Document, Wrong Chunk
+### Passage Selection Failure
 
-The correct source document is present, but the retrieved chunk does not contain the necessary evidence.
+The required source document is reached, but the selected chunk does not contain all required evidence.
 
 Potential recovery:
 
-* neighboring-chunk expansion,
-* sentence-aware retrieval,
-* reranking,
-* larger context windows.
+- neighboring-context expansion,
+- alternative chunk selection,
+- passage reranking,
+- larger evidence windows.
 
-### 3. Insufficient Context
+### Evidence Coverage Failure
 
-Some relevant evidence is retrieved, but the context is incomplete.
+Some required evidence is retrieved, but the evidence chain remains incomplete.
 
 This is especially important for multi-hop questions.
 
 Potential recovery:
 
-* query decomposition,
-* multi-hop retrieval,
-* additional retrieval,
-* context expansion.
+- query decomposition,
+- second-hop retrieval,
+- evidence-conditioned retrieval,
+- additional targeted retrieval.
 
-### 4. Outdated Information
+## Other planned failure classes
 
-Retrieved evidence may have been correct historically but is no longer current.
+The taxonomy also reserves states for:
 
-Potential recovery:
+- ambiguous queries,
+- conflicting evidence,
+- temporal failures,
+- unsupported inference.
 
-* temporal filtering,
-* freshness-aware retrieval,
-* newer-source retrieval.
-
-### 5. Conflicting Sources
-
-Multiple retrieved sources provide incompatible claims.
-
-Potential recovery:
-
-* source verification,
-* evidence comparison,
-* conflict-resolution logic,
-* abstention when the conflict cannot be resolved reliably.
-
-### 6. Ambiguous Query
-
-The query has multiple plausible interpretations.
-
-Potential recovery:
-
-* query clarification,
-* interpretation detection,
-* targeted follow-up questions.
-
-### 7. Unsupported Generation
-
-Relevant context may exist, but the generated answer contains claims that are not supported by the evidence.
-
-Potential recovery:
-
-* evidence verification,
-* answer regeneration,
-* citation checking,
-* abstention.
+These states are defined structurally but are not yet evaluated by the current HotpotQA retrieval oracle.
 
 ---
 
-## Planned Recovery Strategies
+# Dataset Strategy
 
-The planned recovery-action space includes:
+Different datasets are intended for different experimental purposes rather than being merged into one large benchmark.
 
-* query rewriting,
-* query decomposition,
-* hybrid retrieval,
-* reranking,
-* multi-hop retrieval,
-* neighboring-context expansion,
-* metadata filtering,
-* temporal filtering,
-* source verification,
-* conflict resolution,
-* clarification,
-* and abstention.
+## HotpotQA
 
-The recovery mechanism can eventually be formulated as a routing policy:
+HotpotQA is the primary development benchmark.
+
+It is useful because questions include annotated supporting facts, enabling evaluation of whether retrieval recovered the evidence associated with the answer.
+
+The project currently uses the `distractor` configuration.
+
+Training split:
 
 ```text
-state -> recovery action
+90,447 questions
 ```
 
-where the state may contain signals such as:
+Validation split:
 
-* retrieval scores,
-* dense/sparse retrieval agreement,
-* evidence coverage,
-* retrieved-document metadata,
-* temporal information,
-* contradiction signals,
-* entailment signals,
-* and evidence-sufficiency judgments.
+```text
+7,405 questions
+```
+
+The current development experiments use the first 100 training examples and construct a pooled retrieval corpus from their contexts.
+
+This is intentionally a **development sanity slice**, not a final held-out benchmark.
+
+Results from this slice should not be interpreted as final benchmark performance.
+
+## Planned additional evaluation
+
+Future evaluation may include:
+
+- HotpotQA held-out validation queries,
+- BEIR retrieval benchmarks,
+- CRAG-style reliability experiments,
+- RAGBench,
+- controlled failure-injection experiments.
+
+These have not yet been implemented.
 
 ---
 
-## Research Hypotheses
+# HotpotQA Corpus Engineering
 
-The project is designed around four primary hypotheses.
+Before implementing retrieval, the project performs explicit corpus-integrity analysis.
 
-### H1 - Failure-Aware Retrieval
-
-Failure-aware retrieval will improve evidence recall on difficult queries compared with static retrieval pipelines.
-
-### H2 - Failure-Specific Recovery
-
-Different retrieval failure types will benefit from different recovery strategies.
-
-### H3 - Quality vs. System Cost
-
-Adaptive recovery can improve answer faithfulness without proportional increases in latency and computational or API cost.
-
-### H4 - Evidence Sufficiency
-
-Explicit evidence-sufficiency detection can reduce unnecessary recovery operations.
-
-These are **research hypotheses**, not experimental results.
-
-No performance claim should be inferred from them until the corresponding experiments have been implemented and evaluated.
-
----
-
-## Baseline Progression
-
-AdaptiveRAG will be evaluated against increasingly capable static baselines.
-
-### Baseline 0 - LLM Only
-
-```text
-Query
-  |
-  v
-LLM
-  |
-  v
-Answer
-```
-
-No retrieval.
-
-This provides a reference point for measuring the value of external evidence.
-
-### Baseline 1 - Dense Vector RAG
-
-```text
-Query
-  |
-  v
-Embedding Model
-  |
-  v
-Vector Search
-  |
-  v
-Top-K Context
-  |
-  v
-LLM
-```
-
-### Baseline 2 - Hybrid RAG
-
-```text
-             +-> Dense Retrieval --+
-Query -------|                      +-> Fusion -> Context
-             +-> Sparse Retrieval -+
-```
-
-Dense semantic retrieval will be combined with sparse lexical retrieval such as BM25.
-
-### Baseline 3 - Hybrid Retrieval + Reranking
-
-```text
-Dense Retrieval
-       +
-Sparse Retrieval
-       |
-       v
-Candidate Fusion
-       |
-       v
-Cross-Encoder Reranker
-       |
-       v
-Top Evidence
-```
-
-### AdaptiveRAG
-
-```text
-Retrieval
-    |
-    v
-Evidence Inspection
-    |
-    v
-Failure Diagnosis
-    |
-    v
-Adaptive Recovery
-    |
-    v
-Verification
-    |
-    +----> Generate
-    |
-    +----> Recover Again
-    |
-    +----> Abstain
-```
-
-This progression is important because it helps distinguish improvements caused by stronger retrieval from improvements caused specifically by adaptive recovery.
-
----
-
-## Dataset Strategy
-
-AdaptiveRAG uses different datasets for different experimental purposes rather than merging every benchmark into one large dataset.
-
-### HotpotQA
-
-Primary development and evidence-oriented benchmark.
-
-Used for studying:
-
-* multi-hop retrieval,
-* missing evidence,
-* wrong-document retrieval,
-* wrong-passage retrieval,
-* evidence sufficiency,
-* evidence coverage,
-* query decomposition,
-* context expansion,
-* and supporting-fact retrieval.
-
-### BEIR - Planned
-
-Planned for retrieval benchmarking.
-
-Potential uses include comparing:
-
-* dense retrieval,
-* BM25,
-* hybrid retrieval,
-* reranking,
-* Recall@K,
-* Precision@K,
-* MRR,
-* and nDCG.
-
-### CRAG - Planned
-
-Planned for reliability-oriented experiments involving changing or time-sensitive information.
-
-Potential use cases include:
-
-* outdated evidence,
-* changing facts,
-* retrieval reliability,
-* and abstention.
-
-### RAGBench - Planned
-
-Planned as an additional RAG evaluation resource for broader generalization experiments.
-
-### AdaptiveRAG-FailureBench - Planned
-
-A controlled evaluation benchmark is planned specifically for AdaptiveRAG.
-
-Its purpose will be to evaluate the complete chain:
-
-```text
-Known Failure
-     |
-     v
-Failure Diagnosis
-     |
-     v
-Recovery Selection
-     |
-     v
-Recovery Execution
-     |
-     v
-Recovery Success
-```
-
-This is important because aggregate RAG accuracy alone cannot determine whether a failure-aware recovery mechanism is behaving correctly.
-
----
-
-## Why HotpotQA
-
-HotpotQA provides question-answer pairs together with supporting-fact annotations.
-
-A simplified example looks like:
-
-```text
-Question
-    |
-    +-> Context Document A
-    |       |
-    |       +-> Sentence 0
-    |       +-> Sentence 1
-    |       +-> Sentence 2
-    |
-    +-> Context Document B
-            |
-            +-> Sentence 0
-            +-> Sentence 1
-
-Gold Evidence:
-(Document A, Sentence 1)
-(Document B, Sentence 0)
-```
-
-This makes it useful for evaluating not only whether the final answer is correct, but whether the retrieval system actually recovered the evidence required to construct that answer.
-
-The project currently uses the HotpotQA `distractor` configuration.
-
-The training split contains:
-
-```text
-90,447 QA examples
-```
-
-and the validation split contains:
-
-```text
-7,405 QA examples
-```
-
-An important limitation is that the distractor configuration provides a small candidate context for each question.
-
-Retrieval among only those candidate documents should **not** be treated as equivalent to open-corpus retrieval.
-
-AdaptiveRAG therefore uses the annotations for evidence analysis while constructing a larger deduplicated retrieval corpus across examples for retrieval experiments.
-
----
-
-## HotpotQA Corpus Engineering
-
-Before building embeddings or retrieval indexes, the project performs explicit corpus-integrity analysis.
-
-This revealed several preprocessing issues that could otherwise silently affect retrieval evaluation.
-
-### Raw Training Corpus
+## Raw training corpus
 
 The full HotpotQA training split contains:
 
@@ -563,17 +337,13 @@ Document appearances:      899,667
 Unique normalized titles:  482,021
 ```
 
-A document appearance represents a document occurring inside a question's context.
+A document appearance represents a document occurring in one question's context.
 
-The same source can therefore appear multiple times across different questions.
+The same source can therefore appear multiple times across questions.
 
----
+## Version-aware document identity
 
-### Why Title-Only Deduplication Was Rejected
-
-A natural first approach would be to use the normalized Wikipedia title as the document identifier.
-
-However, a full corpus audit found:
+Title-only deduplication was rejected after the corpus audit found:
 
 ```text
 Titles with multiple content versions: 1,661
@@ -587,9 +357,7 @@ title -> document
 
 is not always a safe one-to-one mapping.
 
-Two documents can share the same normalized title while containing different text.
-
-AdaptiveRAG therefore defines document identity using:
+AdaptiveRAG instead constructs document identity from:
 
 ```text
 normalized title
@@ -603,9 +371,9 @@ SHA-256 fingerprint
 stable document ID
 ```
 
-The current implementation uses the first 16 hexadecimal characters of the SHA-256 digest.
+The implementation uses the first 16 hexadecimal characters of the SHA-256 digest.
 
-Document IDs therefore follow the general structure:
+Document IDs therefore follow the general form:
 
 ```text
 hotpotqa_<content_fingerprint>
@@ -641,15 +409,15 @@ is:
 1,661
 ```
 
-which exactly matches the number of normalized titles found to have multiple content versions in the audit.
+which matches the number of normalized titles observed with multiple content versions.
 
-This agreement provides an independent consistency check on the corpus-construction logic.
+This provides an independent consistency check on corpus construction.
 
 ---
 
-## Sentence-Level Evidence Preservation
+# Sentence-Level Evidence Preservation
 
-HotpotQA represents supporting evidence using document titles and sentence positions.
+HotpotQA supporting evidence is represented using document titles and sentence positions.
 
 Conceptually:
 
@@ -659,268 +427,897 @@ Conceptually:
 
 Because sentence IDs are positional, preprocessing must preserve sentence structure.
 
-For example:
+Empty source sentence positions are therefore preserved in metadata rather than deleted in a way that would shift later sentence IDs.
 
-```text
-Sentence 0
-Sentence 1
-Sentence 2
-Sentence 3
-```
-
-cannot safely become:
-
-```text
-Sentence 0
-Sentence 1
-Sentence 3
-```
-
-simply because Sentence 2 happened to be empty.
-
-Doing so would shift subsequent sentence indices and corrupt the mapping between the source benchmark and the processed corpus.
-
-The HotpotQA adapter therefore preserves sentence positions, including empty sentence positions.
-
-Flattened document text can omit empty strings for readability, while the original positional sentence structure remains available in metadata.
-
----
-
-## Gold Evidence Representation
-
-Internally, a supporting fact is represented using:
-
-```text
-document_id
-title
-sentence_id
-```
-
-The `document_id` identifies the exact content version of the source document.
-
-This is important because title alone is insufficient when multiple content versions exist.
-
-Each question's gold supporting facts are resolved against the exact document versions appearing in that question's context.
-
-This creates the foundation for later evidence-aware retrieval metrics.
-
----
-
-## Dataset Integrity Findings
-
-The full HotpotQA training corpus was independently audited before the finalized adapter was accepted.
-
-The audit found:
-
-```text
-Total supporting facts:           215,684
-Valid supporting facts:           215,662
-Missing supporting documents:           0
-Invalid sentence IDs:                   22
-Gold facts on empty sentences:           0
-```
-
-There are therefore:
-
-```text
-22
-```
-
-supporting-fact annotations whose sentence IDs do not correspond to valid sentence positions in the associated source document.
-
-These anomalies originate from the source benchmark annotations.
-
-AdaptiveRAG does **not silently repair these labels**.
-
-Instead, malformed annotations are:
-
-1. preserved,
-2. detected,
-3. reported,
-4. and intended to be handled explicitly by the evaluation policy.
-
-This follows an important research-engineering principle:
-
-> **Preserve source annotations, validate them, and document anomalies instead of silently modifying benchmark ground truth.**
-
----
-
-## Independent Corpus Validation
-
-Two separate stages were used to validate the corpus.
-
-### Raw Corpus Audit
-
-The raw dataset was inspected independently of the final adapter.
-
-It identified:
-
-```text
-90,447 QA examples
-899,667 document appearances
-482,021 unique normalized titles
-1,661 titles with multiple content versions
-538 documents containing empty sentence positions
-538 total empty sentence positions
-215,684 supporting facts
-215,662 valid supporting facts
-22 invalid sentence IDs
-0 missing supporting documents
-0 gold facts pointing to empty sentences
-```
-
-### Final Adapter Validation
-
-The finalized adapter independently produced:
-
-```text
-90,447 QA examples
-483,682 unique document versions
-215,684 supporting facts
-215,662 valid supporting facts
-0 missing supporting documents
-22 invalid sentence IDs
-0 gold facts pointing to empty sentences
-```
-
-The agreement between the independent raw audit and finalized adapter provides a useful integrity check before retrieval experiments begin.
-
----
-
-## Current Implementation
-
-The project is being implemented incrementally.
-
-### Phase 1 - Generic Document Ingestion
-
-**Status: Complete**
-
-Implemented:
-
-* reusable `Document` abstraction,
-* TXT loading,
-* JSON loading,
-* directory loading,
-* metadata propagation,
-* input validation,
-* empty-document handling,
-* document statistics.
-
-The generic ingestion layer is intentionally independent of HotpotQA so future datasets and document sources can reuse the same internal representation.
-
----
-
-### Phase 2 - Character Chunking Baseline
-
-**Status: Complete**
-
-Implemented:
-
-* reusable `Chunk` abstraction,
-* configurable character chunk size,
-* configurable chunk overlap,
-* stable chunk IDs,
-* source-document metadata propagation,
-* chunk statistics.
-
-The character chunker is retained as a baseline.
-
-It is not assumed to be the optimal chunking strategy.
-
----
-
-### Phase 3 - HotpotQA Inspection
-
-**Status: Complete**
-
-Completed:
-
-* Hugging Face dataset integration,
-* schema inspection,
-* question inspection,
-* context-document inspection,
-* supporting-fact inspection,
-* train/validation split inspection.
-
-Observed dataset schema:
-
-```text
-id
-question
-answer
-type
-level
-supporting_facts
-context
-```
-
-The inspection stage established how questions, context documents, sentences, and gold supporting facts are related before corpus transformation was implemented.
-
----
-
-### Phase 4 - HotpotQA Corpus Adapter
-
-**Status: Complete**
-
-Implemented:
-
-* dedicated HotpotQA adapter,
-* sentence-position preservation,
-* normalized-title handling,
-* version-aware document identity,
-* global document deduplication,
-* exact supporting-fact mapping,
-* evidence validation,
-* malformed-evidence detection,
-* full-corpus integrity audit.
-
-Final training-corpus summary:
-
-```text
-QA examples:               90,447
-Unique document versions: 483,682
-Gold supporting facts:    215,684
-Valid supporting facts:   215,662
-Malformed sentence IDs:        22
-```
-
----
-
-### Phase 5 - Evidence-Aware Chunking
-
-**Status: Planned / Next**
-
-The next stage will introduce sentence-aware chunking.
-
-Instead of representing chunks only using character ranges, evidence-aware chunks will preserve sentence mappings such as:
-
-```text
-Chunk
-|
-+-- document_id
-+-- title
-+-- chunk_index
-+-- sentence_start
-+-- sentence_end
-+-- sentence_ids
-+-- text
-```
-
-This will allow a gold supporting fact:
+Gold evidence is internally represented using:
 
 ```text
 (document_id, sentence_id)
 ```
 
-to be mapped deterministically to one or more chunks containing that evidence.
+where `document_id` identifies the exact content version associated with the question.
 
-The existing character chunker will remain available as a baseline so chunking strategies can be compared experimentally rather than assuming sentence-aware chunking is automatically superior.
+## Corpus integrity findings
+
+The full training-corpus audit found:
+
+```text
+Total supporting facts:        215,684
+Valid supporting facts:        215,662
+Missing supporting documents:        0
+Invalid sentence IDs:                22
+Gold facts on empty sentences:        0
+```
+
+The 22 malformed sentence IDs originate from source benchmark annotations.
+
+The project does **not silently repair benchmark ground truth**.
+
+Malformed annotations are preserved, detected, reported, and handled explicitly by evaluation logic.
 
 ---
 
-## Repository Structure
+# Evidence-Aware Sentence Chunking
 
-Current repository structure:
+## Status: Complete
+
+The original character chunker is retained as a generic baseline.
+
+A HotpotQA-compatible sentence-aware chunker was added so retrieved chunks can be mapped exactly back to benchmark evidence.
+
+Current configuration:
+
+```text
+Sentences per chunk: 3
+Sentence overlap:    1
+Step size:           2
+```
+
+A sentence-aware chunk preserves metadata such as:
+
+```text
+Chunk
+|
++-- document_id
++-- chunk_index
++-- title
++-- sentence_ids
++-- text
+```
+
+Empty source sentence positions remain structurally preserved while fully empty chunks are skipped.
+
+## Full-corpus validation
+
+The sentence-aware chunker was validated across the full version-aware HotpotQA training corpus:
+
+```text
+Documents:                    483,682
+Sentence-aware chunks:        821,585
+Evidence-index entries:     1,802,257
+
+Valid gold facts mapped:      215,662 / 215,662
+Malformed annotations:             22
+```
+
+Therefore:
+
+```text
+100% of valid annotated supporting facts
+```
+
+are structurally representable by the sentence-aware chunks.
+
+This is a **mapping/integrity result**, not retrieval accuracy.
+
+---
+
+# Retrieval Architecture
+
+The current retrieval experiments use the same sentence-aware chunks and exact `(document_id, sentence_id)` evidence representation.
+
+For retrieval, chunk text is represented as:
+
+```text
+<title>: <chunk text>
+```
+
+The stored raw chunk text remains unchanged.
+
+## Dense Retrieval
+
+Dense retrieval uses:
+
+```text
+Model:
+sentence-transformers/all-MiniLM-L6-v2
+
+Embedding dimension:
+384
+
+Normalization:
+L2
+
+Index:
+FAISS IndexFlatIP
+```
+
+Because embeddings are normalized, inner product corresponds to cosine similarity.
+
+The dense baseline uses exact FAISS search for the current development corpus.
+
+## BM25 Sparse Retrieval
+
+A deterministic in-memory BM25 retriever was implemented without an external BM25 package.
+
+Current configuration:
+
+```text
+k1 = 1.5
+b  = 0.75
+```
+
+Tokenization uses lowercasing and a simple word-token regular expression.
+
+No stemming or stopword removal is currently applied.
+
+BM25 and dense retrieval use the same title-plus-chunk retrieval representation.
+
+## Hybrid Retrieval
+
+Dense and sparse retrieval are combined using Reciprocal Rank Fusion.
+
+Current configuration:
+
+```text
+Dense candidate depth:   20
+BM25 candidate depth:    20
+RRF k:                    60
+Final evaluation depth:  10
+```
+
+For a chunk appearing at rank `r`:
+
+```text
+RRF contribution = 1 / (60 + r)
+```
+
+Contributions from dense and sparse retrieval are summed.
+
+Raw BM25 and cosine scores are not directly combined because they are not on the same scale.
+
+## Cross-Encoder Reranking
+
+The current strongest ranking baseline uses:
+
+```text
+cross-encoder/ms-marco-MiniLM-L-6-v2
+```
+
+Pipeline:
+
+```text
+Query
+  |
+  +--> Dense@20 ----+
+  |                 |
+  +--> BM25@20 -----+
+                    |
+                    v
+             Deduplicate Candidates
+                    |
+                    v
+              Cross-Encoder
+                    |
+                    v
+                 Top 10
+```
+
+The cross-encoder jointly scores `(query, passage)` pairs.
+
+Its output is treated as a relevance score, **not a calibrated probability or confidence value**.
+
+It is also not treated as an evidence-sufficiency model.
+
+---
+
+# Development Evaluation
+
+## Experimental setup
+
+The current development evaluation uses:
+
+```text
+HotpotQA distractor training examples: 100
+Unique pooled documents:               992
+Sentence-aware chunks:               1,911
+Valid gold supporting facts:           249
+```
+
+These experiments are intended for architecture validation and failure analysis.
+
+They are **not final held-out benchmark results** and have not been used to make general performance claims.
+
+## Metrics
+
+### Evidence Recall@K
+
+Fraction of individual valid gold supporting facts represented in the retrieved chunks.
+
+### Question Hit@K
+
+Fraction of questions where at least one gold supporting fact is retrieved.
+
+### Complete Evidence@K
+
+Fraction of questions where all valid annotated supporting facts are represented.
+
+### MRR@10
+
+Mean reciprocal rank of the first retrieved chunk containing any gold evidence.
+
+Complete evidence is deliberately separated from question hit rate.
+
+A system may retrieve one useful fact while still missing another fact required for a multi-hop evidence chain.
+
+---
+
+# Retrieval Results
+
+## Dense MiniLM
+
+```text
+@1
+Evidence Recall:       0.3896
+Question Hit:          0.8500
+Complete Evidence:     0.0000
+
+@5
+Evidence Recall:       0.7149
+Question Hit:          0.9800
+Complete Evidence:     0.4700
+
+@10
+Evidence Recall:       0.8153
+Question Hit:          0.9900
+Complete Evidence:     0.6400
+
+MRR@10:                0.9000
+```
+
+At `K=10`, dense retrieval recovered:
+
+```text
+203 / 249 gold facts
+64 / 100 complete evidence sets
+```
+
+A notable gap appears between:
+
+```text
+Question Hit@10:       99%
+Complete Evidence@10: 64%
+```
+
+Nearly every question receives some evidence, but substantially fewer receive the complete annotated evidence set.
+
+---
+
+## BM25
+
+```text
+@1
+Evidence Recall:       0.3976
+Question Hit:          0.8000
+Complete Evidence:     0.0000
+
+@5
+Evidence Recall:       0.7430
+Question Hit:          0.9700
+Complete Evidence:     0.5000
+
+@10
+Evidence Recall:       0.8554
+Question Hit:          0.9900
+Complete Evidence:     0.7000
+
+MRR@10:                0.8707
+```
+
+At `K=10`, BM25 recovered:
+
+```text
+213 / 249 gold facts
+70 / 100 complete evidence sets
+```
+
+On this development slice, BM25 produced greater evidence coverage at depth 10 while dense retrieval produced a higher MRR.
+
+This is treated as evidence of complementary retrieval behavior rather than a general claim that one retrieval paradigm is superior.
+
+---
+
+## Hybrid RRF
+
+```text
+@1
+Evidence Recall:       0.4016
+Question Hit:          0.8500
+Complete Evidence:     0.0000
+
+@5
+Evidence Recall:       0.7631
+Question Hit:          0.9900
+Complete Evidence:     0.5500
+
+@10
+Evidence Recall:       0.8394
+Question Hit:          1.0000
+Complete Evidence:     0.6800
+
+MRR@10:                0.9126
+```
+
+At `K=10`, RRF recovered:
+
+```text
+209 / 249 gold facts
+68 / 100 complete evidence sets
+```
+
+RRF improved several early-ranking metrics but did not fully convert dense/sparse complementarity into complete evidence coverage.
+
+---
+
+## Cross-Encoder Reranking
+
+```text
+@1
+Evidence Recall:       0.4297
+Question Hit:          0.9200
+Complete Evidence:     0.0000
+
+@5
+Evidence Recall:       0.7711
+Question Hit:          0.9900
+Complete Evidence:     0.5400
+
+@10
+Evidence Recall:       0.8916
+Question Hit:          1.0000
+Complete Evidence:     0.7500
+
+MRR@10:                0.9533
+```
+
+At `K=10`, the cross-encoder recovered:
+
+```text
+222 / 249 gold facts
+75 / 100 complete evidence sets
+```
+
+Among the configurations tested on this development slice, the cross-encoder produced the highest Evidence Recall@10, Complete Evidence@10, and MRR@10.
+
+Again, these are development results rather than final held-out benchmark results.
+
+---
+
+# Baseline Comparison
+
+| Retrieval configuration | Evidence Recall@10 | Question Hit@10 | Complete Evidence@10 | MRR@10 |
+|---|---:|---:|---:|---:|
+| Dense MiniLM | 0.8153 | 0.9900 | 0.6400 | 0.9000 |
+| BM25 | 0.8554 | 0.9900 | 0.7000 | 0.8707 |
+| Hybrid RRF | 0.8394 | 1.0000 | 0.6800 | 0.9126 |
+| Cross-Encoder | 0.8916 | 1.0000 | 0.7500 | 0.9533 |
+
+These results demonstrate why retrieval quality should not be summarized using a single metric.
+
+For example:
+
+- BM25 retrieved more total gold evidence than dense retrieval at depth 10.
+- Dense retrieval ranked the first useful evidence somewhat earlier according to MRR.
+- RRF improved early ranking but lost some evidence available to individual retrievers.
+- Cross-encoder reranking recovered many of those ranking losses but did not eliminate them.
+
+---
+
+# Dense and Sparse Complementarity
+
+The exact gold-evidence overlap between Dense@10 and BM25@10 was analyzed.
+
+## Fact-level overlap
+
+```text
+Total gold facts:     249
+
+Recovered by both:    190
+Dense only:            13
+BM25 only:              23
+Neither:                23
+```
+
+Therefore:
+
+```text
+Dense Recall@10:       203 / 249 = 0.8153
+BM25 Recall@10:        213 / 249 = 0.8554
+Oracle union:          226 / 249 = 0.9076
+```
+
+The oracle union is an **offline evidence-availability analysis**, not a deployable retrieval result.
+
+## Question-level complete evidence
+
+```text
+Complete by both:              56
+Complete only by Dense:         8
+Complete only by BM25:         14
+Complete by neither alone:     22
+
+Dense complete:                64%
+BM25 complete:                 70%
+Oracle union complete:         79%
+```
+
+The overlap analysis shows genuine complementarity between lexical and semantic retrieval.
+
+However, evidence available across two ranked lists still has to be selected effectively for the final context.
+
+---
+
+# Hybrid Candidate-Loss Analysis
+
+To distinguish candidate-generation failure from final-ranking failure, the actual RRF candidate pool was analyzed:
+
+```text
+Dense@20 ∪ BM25@20
+        |
+        v
+RRF
+        |
+        v
+Final Top 10
+```
+
+## Fact-level availability
+
+```text
+Total gold facts:                          249
+
+Available in Dense@20 ∪ BM25@20:          236
+Candidate-pool evidence availability:   94.78%
+
+Retained by RRF@10:                        209
+RRF Evidence Recall@10:                 83.94%
+
+Candidate-available facts lost by RRF:      27
+Facts unavailable from both candidates:     13
+```
+
+This reveals two different mechanisms:
+
+```text
+Candidate-generation failure
+    Required evidence never enters
+    the candidate pool.
+
+Ranking/fusion failure
+    Required evidence enters the
+    candidate pool but is removed
+    from the final top-k.
+```
+
+## Question-level attribution
+
+Among the 32 RRF-incomplete questions:
+
+```text
+Pure ranking/fusion loss:       21  (65.6%)
+Pure candidate failure:         10  (31.2%)
+Mixed failure:                   1   (3.1%)
+```
+
+This motivated testing a stronger relevance reranker before implementing adaptive recovery.
+
+---
+
+# Cross-Encoder Repair Analysis
+
+Cross-encoder reranking was applied to the same Dense@20 + BM25@20 candidate pool.
+
+This allows a controlled comparison:
+
+```text
+Same candidate generation
+        |
+        +--> RRF ----------> Top 10
+        |
+        +--> CrossEncoder -> Top 10
+```
+
+## Question-level transitions
+
+```text
+RRF complete   -> CE complete:    61
+RRF incomplete -> CE complete:    14
+RRF complete   -> CE incomplete:   7
+RRF incomplete -> CE incomplete:  18
+```
+
+Therefore, the change from:
+
+```text
+RRF complete: 68
+CE complete:  75
+```
+
+is not simply seven repaired questions.
+
+The cross-encoder:
+
+```text
+repaired 14 previously incomplete questions
+introduced 7 complete-to-incomplete regressions
+-----------------------------------------------
+net improvement: +7 complete questions
+```
+
+This is important because aggregate metrics alone would hide those regressions.
+
+## Pure ranking-loss subset
+
+Phase 7 identified:
+
+```text
+21
+```
+
+questions where all required gold evidence existed in the candidate pool but RRF failed to retain a complete evidence set.
+
+Cross-encoder results on those questions:
+
+```text
+Repaired to complete:     14
+Still incomplete:          7
+
+Question repair rate:  66.7%
+```
+
+## Fact-level repair
+
+RRF@10 was missing:
+
+```text
+40 gold facts
+```
+
+Of those:
+
+```text
+27 were available in the candidate pool
+13 were unavailable from the candidate pool
+```
+
+Among the 27 candidate-available facts lost by RRF:
+
+```text
+Recovered by Cross-Encoder:       20
+Still missing after Cross-Encoder: 7
+```
+
+The cross-encoder therefore recovered many ranking losses, but stronger pointwise relevance scoring did not completely solve evidence selection.
+
+---
+
+# Why Relevance Is Not Evidence Sufficiency
+
+The cross-encoder scores individual query-passage pairs.
+
+Conceptually:
+
+```text
+relevance(query, passage_i)
+```
+
+But multi-hop evidence completeness is closer to a set-level objective:
+
+```text
+sufficiency(
+    query,
+    {passage_1, passage_2, ..., passage_k}
+)
+```
+
+A passage can receive a lower individual relevance score while still containing the missing fact required to complete an evidence chain.
+
+This distinction appears in the development experiments.
+
+Some questions have all required evidence available in the candidate pool but remain incomplete after both RRF and cross-encoder reranking.
+
+This motivates explicit evidence-sufficiency reasoning rather than assuming that progressively stronger relevance ranking alone will solve every retrieval failure.
+
+---
+
+# Oracle Failure Diagnosis
+
+The project separates:
+
+```text
+Offline Oracle Diagnosis
+```
+
+from:
+
+```text
+Runtime Predicted Diagnosis
+```
+
+## Oracle diagnosis
+
+During benchmark analysis, HotpotQA gold evidence can determine exactly which required facts and documents were retrieved.
+
+This allows deterministic offline failure attribution.
+
+For example:
+
+```text
+Complete gold evidence
+    -> SUFFICIENT_EVIDENCE
+
+No gold evidence
+    -> SEVERE_RETRIEVAL_FAILURE
+
+All gold documents reached
+but required sentence missing
+    -> PASSAGE_SELECTION_FAILURE
+
+Partial evidence +
+missing required gold document
+    -> EVIDENCE_COVERAGE_FAILURE
+```
+
+These labels use benchmark ground truth.
+
+They are therefore **not available to a deployed RAG system**.
+
+## Runtime diagnosis
+
+A future runtime diagnoser must infer failure states without gold evidence.
+
+Potential observable signals include:
+
+- retrieval scores,
+- score margins,
+- dense/sparse agreement,
+- evidence redundancy,
+- source diversity,
+- entity coverage,
+- entailment signals,
+- contradiction signals,
+- evidence-sufficiency judgments,
+- metadata and temporal signals.
+
+The long-term evaluation will compare:
+
+```text
+Predicted Diagnosis
+        |
+        v
+Oracle Diagnosis
+        |
+        v
+Diagnosis Accuracy
+```
+
+---
+
+# Residual Oracle Failures After Cross-Encoder Reranking
+
+The original Dense@10 oracle distribution was:
+
+```text
+Sufficient evidence:              64
+Severe retrieval failure:          1
+Document selection failure:        0
+Passage selection failure:         5
+Evidence coverage failure:        30
+```
+
+After Dense@20 + BM25@20 candidate generation and cross-encoder reranking:
+
+```text
+Sufficient evidence:              75
+Severe retrieval failure:          0
+Document selection failure:        0
+Passage selection failure:         4
+Evidence coverage failure:        21
+```
+
+Therefore:
+
+```text
+25 residual incomplete questions
+|
++-- 21 evidence-coverage failures
+|
++-- 4 passage-selection failures
+```
+
+Among the residual incomplete questions:
+
+```text
+84% are evidence-coverage failures
+16% are passage-selection failures
+```
+
+The dominant residual problem is therefore not complete retrieval collapse.
+
+Instead, the current system usually retrieves **part of the required evidence chain while missing another required source or evidence component**.
+
+This observation motivates the next research stage: targeted recovery for incomplete evidence.
+
+---
+
+# Current Findings
+
+The current development experiments support several observations.
+
+## 1. Question hit rate can hide incomplete evidence
+
+Dense retrieval reached:
+
+```text
+Question Hit@10:       99%
+Complete Evidence@10: 64%
+```
+
+Retrieving at least one useful fact does not imply that the evidence set is complete.
+
+## 2. Dense and sparse retrieval are complementary
+
+At `K=10`:
+
+```text
+Dense-only gold facts: 13
+BM25-only gold facts:  23
+```
+
+Neither retrieval strategy strictly subsumes the other on this development slice.
+
+## 3. Candidate generation and final ranking are different failure points
+
+Dense@20 ∪ BM25@20 contained:
+
+```text
+236 / 249 = 94.78%
+```
+
+of gold evidence facts.
+
+RRF@10 retained only:
+
+```text
+209 / 249 = 83.94%
+```
+
+Candidate availability therefore does not guarantee final evidence coverage.
+
+## 4. Stronger relevance reranking repairs many ranking failures
+
+The cross-encoder repaired:
+
+```text
+14 / 21 = 66.7%
+```
+
+of pure RRF ranking-loss questions.
+
+It recovered:
+
+```text
+20 / 27
+```
+
+candidate-available gold facts that RRF had lost.
+
+## 5. Stronger reranking can also introduce regressions
+
+Cross-encoder reranking repaired 14 RRF-incomplete questions but caused 7 RRF-complete questions to become incomplete.
+
+A globally stronger aggregate metric therefore does not imply uniformly better evidence selection for every query.
+
+## 6. Residual failures are dominated by incomplete evidence coverage
+
+After cross-encoder reranking:
+
+```text
+21 / 25
+```
+
+residual incomplete questions are oracle-classified as evidence-coverage failures.
+
+This provides empirical motivation for failure-aware retrieval recovery.
+
+---
+
+# Current Limitations
+
+The current implementation intentionally has several limitations.
+
+## Development slice
+
+Current retrieval experiments use the first 100 HotpotQA training examples.
+
+They are development experiments, not final held-out benchmark results.
+
+## Benchmark-derived corpus
+
+The retrieval corpus is pooled from HotpotQA contexts.
+
+It should be described as a **pooled benchmark-derived retrieval corpus**, not full open-Wikipedia retrieval.
+
+## Oracle diagnosis uses gold labels
+
+Current failure attribution relies on exact benchmark supporting facts.
+
+A deployed system will not have these labels.
+
+Runtime failure prediction remains future work.
+
+## Cross-encoder is a relevance reranker
+
+The current cross-encoder was trained for passage relevance.
+
+It is not an evidence-sufficiency model and does not directly optimize multi-passage evidence completeness.
+
+## Exact dense search
+
+The current development corpus uses FAISS `IndexFlatIP`.
+
+Scaling to the full sentence-chunk corpus will require careful consideration of indexing, persistence, memory, and potentially approximate nearest-neighbor search.
+
+## Answer generation is not yet evaluated
+
+The current experiments evaluate retrieval and annotated evidence coverage.
+
+They do not yet establish:
+
+- answer accuracy,
+- faithfulness improvement,
+- hallucination reduction,
+- citation correctness,
+- recovery success,
+- or abstention quality.
+
+## Gold completeness is not identical to answer sufficiency
+
+HotpotQA annotated supporting facts provide a useful benchmark signal, but retrieving every annotated supporting fact is not always equivalent to the minimum evidence required to answer a question.
+
+Future evaluation should therefore distinguish:
+
+```text
+benchmark evidence completeness
+```
+
+from:
+
+```text
+answer sufficiency
+```
+
+and:
+
+```text
+answer correctness / faithfulness
+```
+
+---
+
+# Repository Structure
+
+Current core structure:
 
 ```text
 adaptive-rag/
@@ -928,45 +1325,81 @@ adaptive-rag/
 +-- data/
 |   |
 |   +-- demo/
-|       +-- company_history.txt
-|       +-- company_updates.json
 |
 +-- scripts/
+|   |
 |   +-- audit_hotpotqa_corpus.py
 |   +-- inspect_hotpotqa.py
 |   +-- inspect_hotpotqa_duplicate.py
+|   |
+|   +-- test_ingestion.py
 |   +-- test_chunking.py
 |   +-- test_hotpotqa_adapter.py
-|   +-- test_ingestion.py
-|   +-- validate_hotpotqa_full.py
+|   |
+|   +-- test_sentence_chunking.py
+|   +-- test_sentence_chunking_edge_cases.py
+|   +-- validate_sentence_chunking_full.py
+|   +-- trace_hotpotqa_text.py
+|   |
+|   +-- test_dense_embeddings.py
+|   +-- test_dense_retrieval.py
+|   +-- evaluate_dense_retrieval.py
+|   +-- analyze_dense_failures.py
+|   |
+|   +-- test_sparse_retrieval.py
+|   +-- evaluate_sparse_retrieval.py
+|   +-- analyze_retrieval_complementarity.py
+|   |
+|   +-- test_hybrid_retrieval.py
+|   +-- evaluate_hybrid_retrieval.py
+|   +-- analyze_hybrid_candidate_loss.py
+|   |
+|   +-- test_cross_encoder_reranking.py
+|   +-- evaluate_cross_encoder_reranking.py
+|   +-- analyze_reranker_repairs.py
+|   |
+|   +-- test_oracle_diagnosis.py
+|   +-- analyze_cross_encoder_oracle_diagnosis.py
 |
 +-- src/
 |   |
 |   +-- chunking/
-|   |   +-- __init__.py
 |   |   +-- chunk.py
 |   |   +-- chunker.py
+|   |   +-- sentence_chunker.py
+|   |
+|   +-- diagnosis/
+|   |   +-- states.py
+|   |   +-- oracle.py
+|   |
+|   +-- embeddings/
+|   |   +-- dense_embedder.py
 |   |
 |   +-- ingestion/
-|       +-- __init__.py
-|       +-- document.py
-|       +-- hotpotqa.py
-|       +-- loader.py
+|   |   +-- document.py
+|   |   +-- hotpotqa.py
+|   |   +-- loader.py
+|   |
+|   +-- retrieval/
+|       +-- dense_retriever.py
+|       +-- sparse_retriever.py
+|       +-- hybrid_retriever.py
+|       +-- reranker.py
 |
 +-- .gitignore
 +-- README.md
 +-- requirements.txt
 ```
 
-The repository structure will expand as retrieval, reranking, generation, diagnosis, recovery, and evaluation components are implemented.
+Generated embeddings, retrieval indexes, datasets, model artifacts, caches, and experiment outputs are excluded from version control.
 
 ---
 
-## Installation
+# Installation
 
-### Requirements
+## Environment
 
-Current development environment:
+The project has been developed with:
 
 ```text
 Python 3.11
@@ -974,390 +1407,314 @@ VS Code
 Windows PowerShell
 ```
 
-The project has been developed and validated using Python 3.11.
-
-### Clone the Repository
-
-Once published:
+## Clone
 
 ```bash
 git clone https://github.com/Sahithi102302/adaptive-rag.git
 cd adaptive-rag
 ```
 
-### Create a Virtual Environment
+## Create virtual environment
 
 Windows:
 
 ```powershell
 python -m venv .venv
-```
-
-Activate it:
-
-```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-### Install Dependencies
+## Install dependencies
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-Current core dependencies include:
+Current validated dependencies:
 
 ```text
 datasets==5.0.1
 pyarrow==21.0.0
 pandas==3.0.6
 numpy==2.4.6
+sentence-transformers==6.1.0
+scikit-learn==1.9.1
+faiss-cpu==1.15.1
 ```
 
-`pyarrow==21.0.0` is currently pinned because it has been validated with the project's current Hugging Face `datasets` setup.
-
-Additional dependencies will be introduced incrementally as retrieval and generation components are implemented.
+`pyarrow==21.0.0` is pinned because it has been validated with the current Hugging Face `datasets` environment used by this project.
 
 ---
 
-## Running the Current Pipeline
+# Running the Pipeline
 
-Commands should be run from the repository root.
+Commands should be run from the repository root with the virtual environment activated.
 
-### Test Generic Ingestion
+## Corpus and ingestion
 
 ```powershell
 python -m scripts.test_ingestion
-```
-
-This validates the generic document ingestion pipeline using the small demo fixtures under `data/demo/`.
-
----
-
-### Test Character Chunking
-
-```powershell
 python -m scripts.test_chunking
-```
-
-This validates the current character-based chunking implementation.
-
----
-
-### Inspect HotpotQA
-
-```powershell
 python -m scripts.inspect_hotpotqa
-```
-
-This downloads/loads HotpotQA through Hugging Face `datasets` and inspects its schema and example structure.
-
----
-
-### Test the HotpotQA Adapter
-
-```powershell
 python -m scripts.test_hotpotqa_adapter
-```
-
-This runs the adapter against a smaller subset before full-corpus validation.
-
-A previously validated 1,000-example run produced:
-
-```text
-QA examples:                 1,000
-Unique document versions:    9,758
-Total document characters:   5,262,236
-Total document words:        863,511
-Average words/document:      88.49
-Total supporting facts:      2,377
-Valid supporting facts:      2,376
-Missing documents:           0
-Invalid sentence IDs:        1
-Empty gold sentences:        0
-```
-
----
-
-### Audit the Raw HotpotQA Corpus
-
-```powershell
 python -m scripts.audit_hotpotqa_corpus
-```
-
-This independently examines corpus characteristics and annotation anomalies before relying on the transformed representation.
-
----
-
-### Validate the Full Adapter
-
-```powershell
 python -m scripts.validate_hotpotqa_full
 ```
 
-This validates the complete HotpotQA training corpus after version-aware corpus construction.
+## Sentence-aware chunking
 
-The validated run produced:
-
-```text
-QA examples:                 90,447
-Unique document versions:    483,682
-
-Total supporting facts:      215,684
-Valid supporting facts:      215,662
-Missing documents:           0
-Invalid sentence IDs:        22
-Empty gold sentences:        0
-
-Total detected problems:     22
+```powershell
+python -m scripts.test_sentence_chunking
+python -m scripts.test_sentence_chunking_edge_cases
+python -m scripts.validate_sentence_chunking_full
 ```
 
----
+## Dense retrieval
 
-## Planned Evaluation
-
-AdaptiveRAG will be evaluated at several different levels.
-
-### Retrieval Metrics
-
-Planned metrics include:
-
-* Recall@K
-* Precision@K
-* Hit Rate@K
-* Mean Reciprocal Rank (MRR)
-* nDCG
-* document recall
-* supporting-fact recall
-* complete-evidence recall
-
-Retrieval evaluation will distinguish between retrieving a relevant document and retrieving the exact evidence required to answer a question.
-
----
-
-### Generation Metrics
-
-Planned metrics include:
-
-* answer correctness,
-* answer relevance,
-* faithfulness,
-* citation correctness.
-
----
-
-### Adaptation Metrics
-
-The adaptive layer requires metrics beyond conventional RAG evaluation.
-
-Planned metrics include:
-
-* failure-diagnosis accuracy,
-* recovery success rate,
-* unnecessary recovery rate.
-
-For example, a system that always triggers expensive recovery might improve some retrieval metrics while still being a poor adaptive system.
-
----
-
-### System Metrics
-
-Planned operational metrics include:
-
-* end-to-end latency,
-* retrieval latency,
-* reranking latency,
-* token usage,
-* model/API calls,
-* computational cost.
-
-These measurements are necessary because adaptive recovery introduces additional computation.
-
----
-
-### Reliability Metrics
-
-Planned reliability analysis includes:
-
-* hallucination rate,
-* unsupported-answer rate,
-* abstention behavior.
-
-The goal is not only to maximize answer rate.
-
-A reliable system should be capable of recognizing situations in which the available evidence does not justify an answer.
-
----
-
-## Evaluation by Failure Type
-
-Aggregate accuracy can hide important behavior.
-
-AdaptiveRAG therefore plans to report performance by failure category.
-
-Conceptually:
-
-```text
-                     Baseline    Adaptive
-Wrong document          ?           ?
-Wrong chunk             ?           ?
-Missing evidence        ?           ?
-Outdated evidence       ?           ?
-Conflicting evidence    ?           ?
-Ambiguous query         ?           ?
-Generation failure      ?           ?
+```powershell
+python -m scripts.test_dense_embeddings
+python -m scripts.test_dense_retrieval
+python -m scripts.evaluate_dense_retrieval
+python -m scripts.analyze_dense_failures
 ```
 
-The question marks are intentional.
+## BM25 retrieval
 
-No values will be added until the corresponding experiments have been run.
+```powershell
+python -m scripts.test_sparse_retrieval
+python -m scripts.evaluate_sparse_retrieval
+```
 
-This breakdown is necessary to determine whether particular recovery strategies actually solve the failure types they were designed to address.
+## Dense/sparse complementarity
+
+```powershell
+python -m scripts.analyze_retrieval_complementarity
+```
+
+## Hybrid RRF
+
+```powershell
+python -m scripts.test_hybrid_retrieval
+python -m scripts.evaluate_hybrid_retrieval
+python -m scripts.analyze_hybrid_candidate_loss
+```
+
+## Cross-encoder reranking
+
+```powershell
+python -m scripts.test_cross_encoder_reranking
+python -m scripts.evaluate_cross_encoder_reranking
+python -m scripts.analyze_reranker_repairs
+```
+
+## Oracle diagnosis
+
+```powershell
+python -m scripts.test_oracle_diagnosis
+python -m scripts.analyze_cross_encoder_oracle_diagnosis
+```
+
+Some scripts download HotpotQA or Hugging Face models on first execution.
 
 ---
 
-## Roadmap
+# Roadmap
 
-### Completed
+## Completed
 
-* [x] Project research framing
-* [x] Generic document representation
-* [x] TXT and JSON ingestion
-* [x] Character chunking baseline
-* [x] HotpotQA integration
-* [x] HotpotQA schema inspection
-* [x] Full raw-corpus audit
-* [x] Version-aware document identity
-* [x] Corpus deduplication
-* [x] Gold supporting-fact mapping
-* [x] Gold-evidence validation
-* [x] Full adapter validation
+### Corpus foundation
 
-### Next
+- [x] Project research framing
+- [x] Generic document abstraction
+- [x] TXT and JSON ingestion
+- [x] Character chunking baseline
+- [x] HotpotQA integration
+- [x] Full raw-corpus audit
+- [x] Version-aware document identity
+- [x] Corpus deduplication
+- [x] Exact supporting-fact mapping
+- [x] Full adapter validation
 
-* [ ] Sentence-aware chunk representation
-* [ ] Evidence-aware chunking
-* [ ] Gold evidence-to-chunk mapping
-* [ ] Character vs. sentence chunking comparison
+### Evidence-aware chunking
 
-### Retrieval
+- [x] Sentence-aware chunk representation
+- [x] Sentence-position preservation
+- [x] Evidence-to-chunk mapping
+- [x] Full-corpus evidence-mapping validation
 
-* [ ] Embedding pipeline
-* [ ] Dense vector index
-* [ ] Dense retrieval baseline
-* [ ] BM25 sparse retrieval
-* [ ] Hybrid retrieval
-* [ ] Rank fusion
-* [ ] Cross-encoder reranking
+### Retrieval baselines
+
+- [x] Dense embedding pipeline
+- [x] FAISS dense retrieval
+- [x] Dense retrieval evaluation
+- [x] BM25 sparse retrieval
+- [x] Dense/sparse complementarity analysis
+- [x] Hybrid Reciprocal Rank Fusion
+- [x] Candidate-loss analysis
+- [x] Cross-encoder reranking
+- [x] Reranker repair/regression analysis
+
+### Failure diagnosis foundation
+
+- [x] Failure-state representation
+- [x] Diagnostic-signal representation
+- [x] Offline oracle retrieval diagnosis
+- [x] Dense baseline failure analysis
+- [x] Cross-encoder residual failure analysis
+
+## Next
+
+### Runtime evidence sufficiency and diagnosis
+
+- [ ] Define inference-time observable diagnostic signals
+- [ ] Implement evidence-sufficiency detector
+- [ ] Implement predicted failure diagnosis
+- [ ] Compare predicted diagnoses with oracle labels
+- [ ] Measure diagnosis accuracy by failure type
+
+### Targeted recovery
+
+- [ ] Recovery router
+- [ ] Query rewriting
+- [ ] Query decomposition
+- [ ] Multi-hop / missing-evidence recovery
+- [ ] Passage/context expansion
+- [ ] Recovery verification
+- [ ] Recovery budget
+- [ ] Abstention
 
 ### Generation
 
-* [ ] Context construction
-* [ ] Baseline answer generation
-* [ ] Citation-aware generation
-* [ ] Faithfulness evaluation
-
-### Failure Awareness
-
-* [ ] Evidence-sufficiency detection
-* [ ] Retrieval failure signals
-* [ ] Failure taxonomy implementation
-* [ ] Rule-based failure diagnosis
-* [ ] LLM-assisted diagnosis
-* [ ] Learned diagnosis experiments
-
-### Adaptive Recovery
-
-* [ ] Recovery router
-* [ ] Query rewriting
-* [ ] Query decomposition
-* [ ] Context expansion
-* [ ] Multi-hop recovery
-* [ ] Metadata-aware recovery
-* [ ] Temporal recovery
-* [ ] Verification
-* [ ] Recovery budget
-* [ ] Abstention
+- [ ] Context construction
+- [ ] Baseline answer generation
+- [ ] Citation-aware generation
+- [ ] Faithfulness evaluation
 
 ### Evaluation
 
-* [ ] Retrieval evaluation harness
-* [ ] Generation evaluation harness
-* [ ] Diagnosis evaluation
-* [ ] Recovery evaluation
-* [ ] Failure-type evaluation
-* [ ] Latency measurement
-* [ ] Cost measurement
-* [ ] Reliability analysis
-* [ ] Baseline comparisons
+- [ ] Recovery success rate
+- [ ] Unnecessary recovery rate
+- [ ] Answer correctness
+- [ ] Faithfulness
+- [ ] Citation correctness
+- [ ] Latency
+- [ ] Computational/API cost
+- [ ] Performance by failure type
+- [ ] Held-out HotpotQA evaluation
 
-### Additional Benchmarks
+### Additional benchmarks
 
-* [ ] BEIR evaluation
-* [ ] CRAG evaluation
-* [ ] RAGBench evaluation
-* [ ] AdaptiveRAG-FailureBench
+- [ ] BEIR
+- [ ] CRAG-oriented reliability evaluation
+- [ ] RAGBench
+- [ ] Controlled failure benchmark
 
 ---
 
-## Research Engineering Principles
+# Research Engineering Principles
 
-This project follows several engineering principles intended to keep experimental conclusions trustworthy.
+## 1. Validate Before Scaling
 
-### 1. Validate Before Scaling
+Components are first tested on small subsets before full-corpus or larger-scale execution.
 
-Components are first tested on small subsets before full-corpus execution.
+## 2. Preserve Ground Truth
 
-### 2. Preserve Ground Truth
+Benchmark annotations are not silently changed simply because they appear malformed.
 
-Source annotations are not silently modified simply because they appear malformed.
+## 3. Separate Relevance from Evidence Sufficiency
 
-### 3. Separate Retrieval Relevance from Evidence Sufficiency
+A semantically relevant passage is not automatically sufficient evidence.
 
-A semantically relevant result is not automatically sufficient evidence.
+## 4. Separate Candidate Generation from Ranking
 
-### 4. Compare Against Strong Baselines
+Failure to retrieve evidence into the candidate pool is different from retrieving the evidence and ranking it out of the final context.
 
-Adaptive behavior should be compared against progressively stronger static retrieval systems.
+## 5. Separate Oracle and Runtime Diagnosis
 
-### 5. Measure Cost as Well as Quality
+Gold benchmark evidence may be used for offline analysis, but runtime diagnostic systems must operate without access to those labels.
 
-A recovery strategy is not automatically useful if its quality improvement requires disproportionate latency or computational cost.
+## 6. Compare Against Strong Baselines
 
-### 6. Evaluate Failures Separately
+Failure-aware recovery should be compared against progressively stronger static retrieval and reranking systems.
 
-Aggregate performance alone cannot explain whether the system actually diagnoses and repairs retrieval failures.
+## 7. Analyze Regressions, Not Only Aggregate Gains
 
-### 7. Keep Implemented and Planned Work Distinct
+A method that improves aggregate performance may still make individual queries worse.
 
-Repository documentation distinguishes between:
+Repair and regression transitions are therefore analyzed explicitly.
 
-* implemented components,
-* validated results,
-* planned experiments,
-* and research hypotheses.
+## 8. Measure Recovery, Not Just Detection
+
+Correctly identifying a failure is useful only if the selected intervention actually improves the evidence or final answer.
+
+## 9. Measure Cost as Well as Quality
+
+Adaptive recovery introduces additional computation.
+
+Latency, model calls, token usage, and computational/API cost should therefore be measured alongside quality.
+
+## 10. Keep Implemented and Planned Work Distinct
+
+The repository distinguishes between:
+
+- implemented components,
+- validated development results,
+- offline oracle analyses,
+- planned experiments,
+- and research hypotheses.
 
 Future functionality is not presented as completed work.
 
 ---
 
-## Current Project Status
+# Current Project Status
 
-AdaptiveRAG is under active development.
+The project has completed the retrieval-baseline and reranking foundation required to begin studying failure-aware recovery.
 
-The project has currently completed the corpus-engineering foundation required for retrieval experiments.
+The strongest current tested development pipeline is:
 
-The immediate next stage is:
+```text
+Query
+  |
+  +--> Dense Retrieval @20
+  |
+  +--> BM25 Retrieval @20
+            |
+            v
+      Candidate Union
+            |
+            v
+       Cross-Encoder
+            |
+            v
+          Top 10
+            |
+            v
+   Oracle Failure Analysis
+```
 
-> **Phase 5 - Evidence-Aware Sentence Chunking**
+On the current 100-question development slice:
 
-After evidence-aware chunking is validated, development will proceed toward embeddings and the first real dense-retrieval baseline.
+```text
+Evidence Recall@10:       89.16%
+Question Hit@10:         100.00%
+Complete Evidence@10:     75.00%
+MRR@10:                    0.9533
+```
 
-No claims about adaptive retrieval performance, answer-quality improvement, latency improvement, or hallucination reduction are made at the current stage because those experiments have not yet been implemented.
+The remaining incomplete cases are dominated by:
+
+```text
+Evidence coverage failure: 21
+Passage selection failure:  4
+```
+
+The next research stage is to move from **offline oracle diagnosis** toward **runtime evidence-sufficiency detection and predicted failure diagnosis**, followed by targeted recovery experiments.
+
+No claims are currently made that adaptive recovery improves answer quality, faithfulness, latency, hallucination rate, or cost because those experiments have not yet been implemented.
 
 ---
 
-## Author
+# Author
 
 **Sahithi Vankayala**
 
