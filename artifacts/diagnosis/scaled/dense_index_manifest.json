@@ -1,0 +1,14 @@
+{
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_dimension": 384,
+  "embedding_dtype": "float32",
+  "normalized_embeddings": true,
+  "retrieval_representation": "format_chunk_for_retrieval: title + chunk text",
+  "faiss_index_type": "IndexFlatIP",
+  "similarity": "cosine via inner product over L2-normalized vectors",
+  "chunk_count": 32368,
+  "chunk_artifact": "artifacts\\diagnosis\\scaled\\pooled_chunks.jsonl",
+  "embedding_artifact": "artifacts\\diagnosis\\scaled\\pooled_embeddings.npy",
+  "faiss_artifact": "artifacts\\diagnosis\\scaled\\pooled_faiss.index",
+  "row_alignment": "FAISS row i corresponds to JSONL chunk row i"
+}

@@ -105,3 +105,14 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# ----------------------------
+# Generated diagnosis artifacts
+# ----------------------------
+/artifacts/diagnosis/diagnostic_dataset_100.csv
+/artifacts/diagnosis/scaled/*.csv
+/artifacts/diagnosis/scaled/*.jsonl
+
+# Keep lightweight reproducibility manifests
+!/artifacts/diagnosis/scaled/corpus_manifest.json
+!/artifacts/diagnosis/scaled/dense_index_manifest.json

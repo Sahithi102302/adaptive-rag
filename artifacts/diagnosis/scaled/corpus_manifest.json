@@ -1,0 +1,43 @@
+{
+  "dataset": "hotpotqa/hotpot_qa",
+  "configuration": "distractor",
+  "query_splits": {
+    "exploratory": {
+      "source": "train",
+      "start": 0,
+      "end_exclusive": 100,
+      "count": 100
+    },
+    "detector_train": {
+      "source": "train",
+      "start": 100,
+      "end_exclusive": 1100,
+      "count": 1000
+    },
+    "detector_validation": {
+      "source": "train",
+      "start": 1100,
+      "end_exclusive": 1300,
+      "count": 200
+    },
+    "detector_test": {
+      "source": "validation",
+      "start": 0,
+      "end_exclusive": 500,
+      "count": 500
+    }
+  },
+  "pooled_question_count": 1800,
+  "unique_document_count": 17403,
+  "sentence_chunk_count": 32368,
+  "sentence_chunking": {
+    "sentences_per_chunk": 3,
+    "sentence_overlap": 1
+  },
+  "notes": [
+    "This is a pooled HotpotQA benchmark-derived retrieval corpus.",
+    "It is not an open-Wikipedia retrieval corpus.",
+    "Gold supporting facts are not stored as runtime retrieval features.",
+    "The first 100 training examples remain the exploratory development slice used in earlier phases."
+  ]
+}
