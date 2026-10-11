@@ -1,0 +1,301 @@
+position,policy,status,originally_complete,gold_total,original_gold,final_gold,recovered,lost,final_complete,repaired,harmed,complete_to_incomplete,second_hop_count,bridge,recovery_query
+1,First-hop only,invalid_query_or_bridge,1,4,4,4,0,0,1,0,0,0,0,Skifs,
+1,Naive rank union,invalid_query_or_bridge,1,4,4,4,0,0,1,0,0,0,0,Skifs,
+1,Hop-balanced 5/5,invalid_query_or_bridge,1,4,4,4,0,0,1,0,0,0,0,Skifs,
+1,Hop-balanced 7/3,invalid_query_or_bridge,1,4,4,4,0,0,1,0,0,0,0,Skifs,
+1,Hop-balanced 3/7,invalid_query_or_bridge,1,4,4,4,0,0,1,0,0,0,0,Skifs,
+1,Combined cross-encoder,invalid_query_or_bridge,1,4,4,4,0,0,1,0,0,0,0,Skifs,
+2,First-hop only,retrieved,0,2,1,1,0,0,0,0,0,0,10,Oscar Wilde,In which year did Oscar Wilde pass away?
+2,Naive rank union,retrieved,0,2,1,1,0,0,0,0,0,0,10,Oscar Wilde,In which year did Oscar Wilde pass away?
+2,Hop-balanced 5/5,retrieved,0,2,1,2,1,0,1,1,0,0,10,Oscar Wilde,In which year did Oscar Wilde pass away?
+2,Hop-balanced 7/3,retrieved,0,2,1,2,1,0,1,1,0,0,10,Oscar Wilde,In which year did Oscar Wilde pass away?
+2,Hop-balanced 3/7,retrieved,0,2,1,2,1,0,1,1,0,0,10,Oscar Wilde,In which year did Oscar Wilde pass away?
+2,Combined cross-encoder,retrieved,0,2,1,1,0,0,0,0,0,0,10,Oscar Wilde,In which year did Oscar Wilde pass away?
+3,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Eric Overmyer,What is the episode number of 'Misgivings' written by Eric Overmyer?
+3,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Eric Overmyer,What is the episode number of 'Misgivings' written by Eric Overmyer?
+3,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Eric Overmyer,What is the episode number of 'Misgivings' written by Eric Overmyer?
+3,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Eric Overmyer,What is the episode number of 'Misgivings' written by Eric Overmyer?
+3,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Eric Overmyer,What is the episode number of 'Misgivings' written by Eric Overmyer?
+3,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Eric Overmyer,What is the episode number of 'Misgivings' written by Eric Overmyer?
+4,First-hop only,retrieved,0,2,1,1,0,0,0,0,0,0,10,High Bridge,What year did the railroad that built the High Bridge cease to operate?
+4,Naive rank union,retrieved,0,2,1,1,0,0,0,0,0,0,10,High Bridge,What year did the railroad that built the High Bridge cease to operate?
+4,Hop-balanced 5/5,retrieved,0,2,1,1,0,0,0,0,0,0,10,High Bridge,What year did the railroad that built the High Bridge cease to operate?
+4,Hop-balanced 7/3,retrieved,0,2,1,1,0,0,0,0,0,0,10,High Bridge,What year did the railroad that built the High Bridge cease to operate?
+4,Hop-balanced 3/7,retrieved,0,2,1,1,0,0,0,0,0,0,10,High Bridge,What year did the railroad that built the High Bridge cease to operate?
+4,Combined cross-encoder,retrieved,0,2,1,1,0,0,0,0,0,0,10,High Bridge,What year did the railroad that built the High Bridge cease to operate?
+5,First-hop only,retrieved,0,2,1,1,0,0,0,0,0,0,10,Robin Gibb,What band does Robin Gibb produce albums for?
+5,Naive rank union,retrieved,0,2,1,1,0,0,0,0,0,0,10,Robin Gibb,What band does Robin Gibb produce albums for?
+5,Hop-balanced 5/5,retrieved,0,2,1,2,1,0,1,1,0,0,10,Robin Gibb,What band does Robin Gibb produce albums for?
+5,Hop-balanced 7/3,retrieved,0,2,1,2,1,0,1,1,0,0,10,Robin Gibb,What band does Robin Gibb produce albums for?
+5,Hop-balanced 3/7,retrieved,0,2,1,2,1,0,1,1,0,0,10,Robin Gibb,What band does Robin Gibb produce albums for?
+5,Combined cross-encoder,retrieved,0,2,1,1,0,0,0,0,0,0,10,Robin Gibb,What band does Robin Gibb produce albums for?
+6,First-hop only,retrieved,0,2,1,1,0,0,0,0,0,0,10,Seattle Redhawks,Which state is the Seattle Redhawks women's basketball team based in?
+6,Naive rank union,retrieved,0,2,1,1,0,0,0,0,0,0,10,Seattle Redhawks,Which state is the Seattle Redhawks women's basketball team based in?
+6,Hop-balanced 5/5,retrieved,0,2,1,1,0,0,0,0,0,0,10,Seattle Redhawks,Which state is the Seattle Redhawks women's basketball team based in?
+6,Hop-balanced 7/3,retrieved,0,2,1,1,0,0,0,0,0,0,10,Seattle Redhawks,Which state is the Seattle Redhawks women's basketball team based in?
+6,Hop-balanced 3/7,retrieved,0,2,1,1,0,0,0,0,0,0,10,Seattle Redhawks,Which state is the Seattle Redhawks women's basketball team based in?
+6,Combined cross-encoder,retrieved,0,2,1,1,0,0,0,0,0,0,10,Seattle Redhawks,Which state is the Seattle Redhawks women's basketball team based in?
+7,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Saosin,When did Saosin form?
+7,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Saosin,When did Saosin form?
+7,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Saosin,When did Saosin form?
+7,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Saosin,When did Saosin form?
+7,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Saosin,When did Saosin form?
+7,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Saosin,When did Saosin form?
+8,First-hop only,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,BWF World Championships,
+8,Naive rank union,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,BWF World Championships,
+8,Hop-balanced 5/5,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,BWF World Championships,
+8,Hop-balanced 7/3,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,BWF World Championships,
+8,Hop-balanced 3/7,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,BWF World Championships,
+8,Combined cross-encoder,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,BWF World Championships,
+9,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Sam Calagione,
+9,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Sam Calagione,
+9,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Sam Calagione,
+9,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Sam Calagione,
+9,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Sam Calagione,
+9,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Sam Calagione,
+10,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Australia,What other forms of plants are found exclusively in Australia besides Hakea?
+10,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Australia,What other forms of plants are found exclusively in Australia besides Hakea?
+10,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Australia,What other forms of plants are found exclusively in Australia besides Hakea?
+10,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Australia,What other forms of plants are found exclusively in Australia besides Hakea?
+10,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Australia,What other forms of plants are found exclusively in Australia besides Hakea?
+10,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Australia,What other forms of plants are found exclusively in Australia besides Hakea?
+11,First-hop only,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,Shia LaBeouf,
+11,Naive rank union,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,Shia LaBeouf,
+11,Hop-balanced 5/5,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,Shia LaBeouf,
+11,Hop-balanced 7/3,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,Shia LaBeouf,
+11,Hop-balanced 3/7,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,Shia LaBeouf,
+11,Combined cross-encoder,invalid_query_or_bridge,0,3,2,2,0,0,0,0,0,0,0,Shia LaBeouf,
+12,First-hop only,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,American,
+12,Naive rank union,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,American,
+12,Hop-balanced 5/5,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,American,
+12,Hop-balanced 7/3,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,American,
+12,Hop-balanced 3/7,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,American,
+12,Combined cross-encoder,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,American,
+13,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Apple IIe,
+13,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Apple IIe,
+13,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Apple IIe,
+13,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Apple IIe,
+13,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Apple IIe,
+13,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Apple IIe,
+14,First-hop only,retrieved,0,3,1,1,0,0,0,0,0,0,10,Stagger Lee,What university did 'Stagger Lee' originate from?
+14,Naive rank union,retrieved,0,3,1,1,0,0,0,0,0,0,10,Stagger Lee,What university did 'Stagger Lee' originate from?
+14,Hop-balanced 5/5,retrieved,0,3,1,1,0,0,0,0,0,0,10,Stagger Lee,What university did 'Stagger Lee' originate from?
+14,Hop-balanced 7/3,retrieved,0,3,1,1,0,0,0,0,0,0,10,Stagger Lee,What university did 'Stagger Lee' originate from?
+14,Hop-balanced 3/7,retrieved,0,3,1,1,0,0,0,0,0,0,10,Stagger Lee,What university did 'Stagger Lee' originate from?
+14,Combined cross-encoder,retrieved,0,3,1,1,0,0,0,0,0,0,10,Stagger Lee,What university did 'Stagger Lee' originate from?
+15,First-hop only,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Yemi Alade,
+15,Naive rank union,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Yemi Alade,
+15,Hop-balanced 5/5,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Yemi Alade,
+15,Hop-balanced 7/3,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Yemi Alade,
+15,Hop-balanced 3/7,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Yemi Alade,
+15,Combined cross-encoder,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Yemi Alade,
+16,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Cars,"album(s) by The Cars including ""I'm Not the One"""
+16,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Cars,"album(s) by The Cars including ""I'm Not the One"""
+16,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Cars,"album(s) by The Cars including ""I'm Not the One"""
+16,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Cars,"album(s) by The Cars including ""I'm Not the One"""
+16,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Cars,"album(s) by The Cars including ""I'm Not the One"""
+16,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Cars,"album(s) by The Cars including ""I'm Not the One"""
+17,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Curzon Ashton F. C.,What gender does Curzon Ashton F. C. consist of?
+17,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Curzon Ashton F. C.,What gender does Curzon Ashton F. C. consist of?
+17,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Curzon Ashton F. C.,What gender does Curzon Ashton F. C. consist of?
+17,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Curzon Ashton F. C.,What gender does Curzon Ashton F. C. consist of?
+17,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Curzon Ashton F. C.,What gender does Curzon Ashton F. C. consist of?
+17,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Curzon Ashton F. C.,What gender does Curzon Ashton F. C. consist of?
+18,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Irina Peltsin,Where did Irina Peltsin live in 'The Sopranos'?
+18,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Irina Peltsin,Where did Irina Peltsin live in 'The Sopranos'?
+18,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Irina Peltsin,Where did Irina Peltsin live in 'The Sopranos'?
+18,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Irina Peltsin,Where did Irina Peltsin live in 'The Sopranos'?
+18,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Irina Peltsin,Where did Irina Peltsin live in 'The Sopranos'?
+18,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Irina Peltsin,Where did Irina Peltsin live in 'The Sopranos'?
+19,First-hop only,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Celebrity Deathmatch,
+19,Naive rank union,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Celebrity Deathmatch,
+19,Hop-balanced 5/5,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Celebrity Deathmatch,
+19,Hop-balanced 7/3,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Celebrity Deathmatch,
+19,Hop-balanced 3/7,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Celebrity Deathmatch,
+19,Combined cross-encoder,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Celebrity Deathmatch,
+20,First-hop only,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,"Daniel "" Dan "" Awde",
+20,Naive rank union,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,"Daniel "" Dan "" Awde",
+20,Hop-balanced 5/5,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,"Daniel "" Dan "" Awde",
+20,Hop-balanced 7/3,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,"Daniel "" Dan "" Awde",
+20,Hop-balanced 3/7,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,"Daniel "" Dan "" Awde",
+20,Combined cross-encoder,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,"Daniel "" Dan "" Awde",
+21,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Jhené Aiko,
+21,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Jhené Aiko,
+21,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Jhené Aiko,
+21,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Jhené Aiko,
+21,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Jhené Aiko,
+21,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Jhené Aiko,
+22,First-hop only,retrieved,1,3,3,3,0,0,1,0,0,0,10,South Korean,What Japanese book was the 2004 South Korean film 'Fighter in the Wind' based on?
+22,Naive rank union,retrieved,1,3,3,3,0,0,1,0,0,0,10,South Korean,What Japanese book was the 2004 South Korean film 'Fighter in the Wind' based on?
+22,Hop-balanced 5/5,retrieved,1,3,3,3,0,0,1,0,0,0,10,South Korean,What Japanese book was the 2004 South Korean film 'Fighter in the Wind' based on?
+22,Hop-balanced 7/3,retrieved,1,3,3,3,0,0,1,0,0,0,10,South Korean,What Japanese book was the 2004 South Korean film 'Fighter in the Wind' based on?
+22,Hop-balanced 3/7,retrieved,1,3,3,3,0,0,1,0,0,0,10,South Korean,What Japanese book was the 2004 South Korean film 'Fighter in the Wind' based on?
+22,Combined cross-encoder,retrieved,1,3,3,3,0,0,1,0,0,0,10,South Korean,What Japanese book was the 2004 South Korean film 'Fighter in the Wind' based on?
+23,First-hop only,retrieved,0,3,0,0,0,0,0,0,0,0,10,Marichen Altenburg,who is the half-brother of marichen altenburg?
+23,Naive rank union,retrieved,0,3,0,0,0,0,0,0,0,0,10,Marichen Altenburg,who is the half-brother of marichen altenburg?
+23,Hop-balanced 5/5,retrieved,0,3,0,0,0,0,0,0,0,0,10,Marichen Altenburg,who is the half-brother of marichen altenburg?
+23,Hop-balanced 7/3,retrieved,0,3,0,0,0,0,0,0,0,0,10,Marichen Altenburg,who is the half-brother of marichen altenburg?
+23,Hop-balanced 3/7,retrieved,0,3,0,0,0,0,0,0,0,0,10,Marichen Altenburg,who is the half-brother of marichen altenburg?
+23,Combined cross-encoder,retrieved,0,3,0,2,2,0,0,0,0,0,10,Marichen Altenburg,who is the half-brother of marichen altenburg?
+24,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Elizabeth,
+24,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Elizabeth,
+24,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Elizabeth,
+24,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Elizabeth,
+24,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Elizabeth,
+24,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Elizabeth,
+25,First-hop only,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,World Fantasy Award,
+25,Naive rank union,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,World Fantasy Award,
+25,Hop-balanced 5/5,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,World Fantasy Award,
+25,Hop-balanced 7/3,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,World Fantasy Award,
+25,Hop-balanced 3/7,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,World Fantasy Award,
+25,Combined cross-encoder,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,World Fantasy Award,
+26,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,American,
+26,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,American,
+26,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,American,
+26,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,American,
+26,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,American,
+26,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,American,
+27,First-hop only,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Eric James Neal,
+27,Naive rank union,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Eric James Neal,
+27,Hop-balanced 5/5,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Eric James Neal,
+27,Hop-balanced 7/3,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Eric James Neal,
+27,Hop-balanced 3/7,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Eric James Neal,
+27,Combined cross-encoder,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Eric James Neal,
+28,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Charles Edward Ranken,
+28,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Charles Edward Ranken,
+28,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Charles Edward Ranken,
+28,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Charles Edward Ranken,
+28,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Charles Edward Ranken,
+28,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Charles Edward Ranken,
+29,First-hop only,retrieved,1,4,4,4,0,0,1,0,0,0,10,Channing Tatum,What 2005 film did Channing Tatum portray as Duke?
+29,Naive rank union,retrieved,1,4,4,4,0,0,1,0,0,0,10,Channing Tatum,What 2005 film did Channing Tatum portray as Duke?
+29,Hop-balanced 5/5,retrieved,1,4,4,4,0,0,1,0,0,0,10,Channing Tatum,What 2005 film did Channing Tatum portray as Duke?
+29,Hop-balanced 7/3,retrieved,1,4,4,4,0,0,1,0,0,0,10,Channing Tatum,What 2005 film did Channing Tatum portray as Duke?
+29,Hop-balanced 3/7,retrieved,1,4,4,4,0,0,1,0,0,0,10,Channing Tatum,What 2005 film did Channing Tatum portray as Duke?
+29,Combined cross-encoder,retrieved,1,4,4,4,0,0,1,0,0,0,10,Channing Tatum,What 2005 film did Channing Tatum portray as Duke?
+30,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Brussels,
+30,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Brussels,
+30,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Brussels,
+30,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Brussels,
+30,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Brussels,
+30,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Brussels,
+31,First-hop only,retrieved,0,2,1,1,0,0,0,0,0,0,10,University of Nebraska,What university system does the University of Nebraska belong to?
+31,Naive rank union,retrieved,0,2,1,1,0,0,0,0,0,0,10,University of Nebraska,What university system does the University of Nebraska belong to?
+31,Hop-balanced 5/5,retrieved,0,2,1,2,1,0,1,1,0,0,10,University of Nebraska,What university system does the University of Nebraska belong to?
+31,Hop-balanced 7/3,retrieved,0,2,1,2,1,0,1,1,0,0,10,University of Nebraska,What university system does the University of Nebraska belong to?
+31,Hop-balanced 3/7,retrieved,0,2,1,2,1,0,1,1,0,0,10,University of Nebraska,What university system does the University of Nebraska belong to?
+31,Combined cross-encoder,retrieved,0,2,1,1,0,0,0,0,0,0,10,University of Nebraska,What university system does the University of Nebraska belong to?
+32,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Cynthia Mort,
+32,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Cynthia Mort,
+32,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Cynthia Mort,
+32,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Cynthia Mort,
+32,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Cynthia Mort,
+32,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Cynthia Mort,
+33,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Pocahontas,"Which film came out later, Pocahontas (1995) or The Game Plan?"
+33,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Pocahontas,"Which film came out later, Pocahontas (1995) or The Game Plan?"
+33,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Pocahontas,"Which film came out later, Pocahontas (1995) or The Game Plan?"
+33,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Pocahontas,"Which film came out later, Pocahontas (1995) or The Game Plan?"
+33,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Pocahontas,"Which film came out later, Pocahontas (1995) or The Game Plan?"
+33,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Pocahontas,"Which film came out later, Pocahontas (1995) or The Game Plan?"
+34,First-hop only,retrieved,0,2,1,1,0,0,0,0,0,0,10,Hammond,What TV show did Don S. Davis play General Hammond in?
+34,Naive rank union,retrieved,0,2,1,1,0,0,0,0,0,0,10,Hammond,What TV show did Don S. Davis play General Hammond in?
+34,Hop-balanced 5/5,retrieved,0,2,1,1,0,0,0,0,0,0,10,Hammond,What TV show did Don S. Davis play General Hammond in?
+34,Hop-balanced 7/3,retrieved,0,2,1,1,0,0,0,0,0,0,10,Hammond,What TV show did Don S. Davis play General Hammond in?
+34,Hop-balanced 3/7,retrieved,0,2,1,1,0,0,0,0,0,0,10,Hammond,What TV show did Don S. Davis play General Hammond in?
+34,Combined cross-encoder,retrieved,0,2,1,1,0,0,0,0,0,0,10,Hammond,What TV show did Don S. Davis play General Hammond in?
+35,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,"Marvin Ivan "" Buck",
+35,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,"Marvin Ivan "" Buck",
+35,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,"Marvin Ivan "" Buck",
+35,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,"Marvin Ivan "" Buck",
+35,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,"Marvin Ivan "" Buck",
+35,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,"Marvin Ivan "" Buck",
+36,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Black Sabbath,What date did the EP 'The End' by English heavy metal band Black Sabbath release?
+36,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Black Sabbath,What date did the EP 'The End' by English heavy metal band Black Sabbath release?
+36,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Black Sabbath,What date did the EP 'The End' by English heavy metal band Black Sabbath release?
+36,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Black Sabbath,What date did the EP 'The End' by English heavy metal band Black Sabbath release?
+36,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Black Sabbath,What date did the EP 'The End' by English heavy metal band Black Sabbath release?
+36,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Black Sabbath,What date did the EP 'The End' by English heavy metal band Black Sabbath release?
+37,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Ishita Dutta,Who were the other actresses in 'Drishyam' besides Ishita Dutta?
+37,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Ishita Dutta,Who were the other actresses in 'Drishyam' besides Ishita Dutta?
+37,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Ishita Dutta,Who were the other actresses in 'Drishyam' besides Ishita Dutta?
+37,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Ishita Dutta,Who were the other actresses in 'Drishyam' besides Ishita Dutta?
+37,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Ishita Dutta,Who were the other actresses in 'Drishyam' besides Ishita Dutta?
+37,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Ishita Dutta,Who were the other actresses in 'Drishyam' besides Ishita Dutta?
+38,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Henrik Palmgren,
+38,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Henrik Palmgren,
+38,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Henrik Palmgren,
+38,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Henrik Palmgren,
+38,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Henrik Palmgren,
+38,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Henrik Palmgren,
+39,First-hop only,retrieved,0,2,1,1,0,0,0,0,0,0,10,Tadashi Hamada,Who did Tadashi Hamada voice in Disney's 'Big Hero 6'?
+39,Naive rank union,retrieved,0,2,1,1,0,0,0,0,0,0,10,Tadashi Hamada,Who did Tadashi Hamada voice in Disney's 'Big Hero 6'?
+39,Hop-balanced 5/5,retrieved,0,2,1,2,1,0,1,1,0,0,10,Tadashi Hamada,Who did Tadashi Hamada voice in Disney's 'Big Hero 6'?
+39,Hop-balanced 7/3,retrieved,0,2,1,1,0,0,0,0,0,0,10,Tadashi Hamada,Who did Tadashi Hamada voice in Disney's 'Big Hero 6'?
+39,Hop-balanced 3/7,retrieved,0,2,1,2,1,0,1,1,0,0,10,Tadashi Hamada,Who did Tadashi Hamada voice in Disney's 'Big Hero 6'?
+39,Combined cross-encoder,retrieved,0,2,1,1,0,0,0,0,0,0,10,Tadashi Hamada,Who did Tadashi Hamada voice in Disney's 'Big Hero 6'?
+40,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Chagall Guevara,What genre is Chagall Guevara?
+40,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Chagall Guevara,What genre is Chagall Guevara?
+40,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Chagall Guevara,What genre is Chagall Guevara?
+40,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Chagall Guevara,What genre is Chagall Guevara?
+40,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Chagall Guevara,What genre is Chagall Guevara?
+40,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Chagall Guevara,What genre is Chagall Guevara?
+41,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Bank of America Corporation,
+41,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Bank of America Corporation,
+41,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Bank of America Corporation,
+41,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Bank of America Corporation,
+41,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Bank of America Corporation,
+41,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Bank of America Corporation,
+42,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Tara Elders,
+42,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Tara Elders,
+42,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Tara Elders,
+42,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Tara Elders,
+42,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Tara Elders,
+42,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,Tara Elders,
+43,First-hop only,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Athletic,
+43,Naive rank union,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Athletic,
+43,Hop-balanced 5/5,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Athletic,
+43,Hop-balanced 7/3,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Athletic,
+43,Hop-balanced 3/7,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Athletic,
+43,Combined cross-encoder,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Athletic,
+44,First-hop only,retrieved,1,3,3,3,0,0,1,0,0,0,10,Noel Leung,What roles did Noel Leung play in TVB television?
+44,Naive rank union,retrieved,1,3,3,3,0,0,1,0,0,0,10,Noel Leung,What roles did Noel Leung play in TVB television?
+44,Hop-balanced 5/5,retrieved,1,3,3,3,0,0,1,0,0,0,10,Noel Leung,What roles did Noel Leung play in TVB television?
+44,Hop-balanced 7/3,retrieved,1,3,3,3,0,0,1,0,0,0,10,Noel Leung,What roles did Noel Leung play in TVB television?
+44,Hop-balanced 3/7,retrieved,1,3,3,3,0,0,1,0,0,0,10,Noel Leung,What roles did Noel Leung play in TVB television?
+44,Combined cross-encoder,retrieved,1,3,3,3,0,0,1,0,0,0,10,Noel Leung,What roles did Noel Leung play in TVB television?
+45,First-hop only,retrieved,1,2,2,2,0,0,1,0,0,0,10,Christo van Rensburg,What sport do Mary-Ann Eisel and Christo van Rensburg play?
+45,Naive rank union,retrieved,1,2,2,2,0,0,1,0,0,0,10,Christo van Rensburg,What sport do Mary-Ann Eisel and Christo van Rensburg play?
+45,Hop-balanced 5/5,retrieved,1,2,2,2,0,0,1,0,0,0,10,Christo van Rensburg,What sport do Mary-Ann Eisel and Christo van Rensburg play?
+45,Hop-balanced 7/3,retrieved,1,2,2,2,0,0,1,0,0,0,10,Christo van Rensburg,What sport do Mary-Ann Eisel and Christo van Rensburg play?
+45,Hop-balanced 3/7,retrieved,1,2,2,2,0,0,1,0,0,0,10,Christo van Rensburg,What sport do Mary-Ann Eisel and Christo van Rensburg play?
+45,Combined cross-encoder,retrieved,1,2,2,2,0,0,1,0,0,0,10,Christo van Rensburg,What sport do Mary-Ann Eisel and Christo van Rensburg play?
+46,First-hop only,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Bullets,
+46,Naive rank union,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Bullets,
+46,Hop-balanced 5/5,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Bullets,
+46,Hop-balanced 7/3,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Bullets,
+46,Hop-balanced 3/7,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Bullets,
+46,Combined cross-encoder,invalid_query_or_bridge,0,2,1,1,0,0,0,0,0,0,0,Bullets,
+47,First-hop only,retrieved,0,4,3,3,0,0,0,0,0,0,10,Byron,How much money did Helen Byron request to be returned from the Oshoites in 1885?
+47,Naive rank union,retrieved,0,4,3,3,0,0,0,0,0,0,10,Byron,How much money did Helen Byron request to be returned from the Oshoites in 1885?
+47,Hop-balanced 5/5,retrieved,0,4,3,4,1,0,1,1,0,0,10,Byron,How much money did Helen Byron request to be returned from the Oshoites in 1885?
+47,Hop-balanced 7/3,retrieved,0,4,3,3,0,0,0,0,0,0,10,Byron,How much money did Helen Byron request to be returned from the Oshoites in 1885?
+47,Hop-balanced 3/7,retrieved,0,4,3,4,1,0,1,1,0,0,10,Byron,How much money did Helen Byron request to be returned from the Oshoites in 1885?
+47,Combined cross-encoder,retrieved,0,4,3,4,1,0,1,1,0,0,10,Byron,How much money did Helen Byron request to be returned from the Oshoites in 1885?
+48,First-hop only,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Savenac,
+48,Naive rank union,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Savenac,
+48,Hop-balanced 5/5,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Savenac,
+48,Hop-balanced 7/3,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Savenac,
+48,Hop-balanced 3/7,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Savenac,
+48,Combined cross-encoder,invalid_query_or_bridge,1,3,3,3,0,0,1,0,0,0,0,Savenac,
+49,First-hop only,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,CBS,
+49,Naive rank union,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,CBS,
+49,Hop-balanced 5/5,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,CBS,
+49,Hop-balanced 7/3,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,CBS,
+49,Hop-balanced 3/7,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,CBS,
+49,Combined cross-encoder,invalid_query_or_bridge,1,2,2,2,0,0,1,0,0,0,0,CBS,
+50,First-hop only,retrieved,0,3,2,2,0,0,0,0,0,0,10,Ho Mann Jahaan,Where are the dialogues of Ho Mann Jahaan filmed?
+50,Naive rank union,retrieved,0,3,2,2,0,0,0,0,0,0,10,Ho Mann Jahaan,Where are the dialogues of Ho Mann Jahaan filmed?
+50,Hop-balanced 5/5,retrieved,0,3,2,2,0,0,0,0,0,0,10,Ho Mann Jahaan,Where are the dialogues of Ho Mann Jahaan filmed?
+50,Hop-balanced 7/3,retrieved,0,3,2,2,0,0,0,0,0,0,10,Ho Mann Jahaan,Where are the dialogues of Ho Mann Jahaan filmed?
+50,Hop-balanced 3/7,retrieved,0,3,2,2,0,0,0,0,0,0,10,Ho Mann Jahaan,Where are the dialogues of Ho Mann Jahaan filmed?
+50,Combined cross-encoder,retrieved,0,3,2,2,0,0,0,0,0,0,10,Ho Mann Jahaan,Where are the dialogues of Ho Mann Jahaan filmed?

@@ -1712,6 +1712,1261 @@ The next research stage is to move from **offline oracle diagnosis** toward **ru
 
 No claims are currently made that adaptive recovery improves answer quality, faithfulness, latency, hallucination rate, or cost because those experiments have not yet been implemented.
 
+
+---
+
+# Phase 10 — Failure-Aware Retrieval Recovery
+
+## Status: Implementation Complete — Post-Recovery Verification Pending
+
+Phase 10 extends AdaptiveRAG beyond retrieval and failure detection by introducing recovery strategies for questions whose retrieved evidence is predicted to be insufficient.
+
+The central objective is:
+
+> **Can a RAG system recover missing evidence through targeted retrieval interventions while preserving useful original evidence and avoiding unnecessary regressions?**
+
+Earlier phases established that retrieving semantically relevant passages does not guarantee complete evidence coverage.
+
+Phase 9 introduced a runtime evidence-sufficiency detector that predicts whether the retrieved evidence is sufficient without accessing HotpotQA ground-truth annotations.
+
+Phase 10 builds on this detector to investigate:
+
+1. which retrieval interventions can recover missing evidence,
+2. how multi-hop retrieval can discover additional evidence,
+3. how original and recovered evidence should be combined,
+4. when the system should attempt recovery,
+5. and how recovery candidates can be prepared safely for subsequent verification.
+
+The current implementation supports recovery execution, evidence selection, runtime controller routing, and recovery-candidate handoff.
+
+**Independent post-recovery verification is not yet implemented.** Recovery execution and successful evidence repair are therefore treated as separate outcomes.
+
+---
+
+## Phase 10 Architecture
+
+The implemented recovery architecture is organized as follows:
+
+```text
+User Query
+    |
+    v
+Initial Retrieval
+    |
+    +--> Dense Retrieval
+    |
+    +--> BM25 Retrieval
+              |
+              v
+        Candidate Union
+              |
+              v
+         Cross-Encoder
+              |
+              v
+        Original Top 10
+              |
+              v
+     Runtime Feature Extraction
+              |
+              v
+      Sufficiency Detection
+              |
+              v
+        Recovery Controller
+              |
+       +------+------+
+       |             |
+       v             v
+   Keep Original   Attempt Recovery
+       |             |
+       |             v
+       |       Recovery Intervention
+       |             |
+       |             v
+       |       Recovered Evidence
+       |             |
+       |             v
+       |       Evidence Selection
+       |             |
+       |             v
+       |       Recovery Candidate
+       |             |
+       |             v
+       |       Pending Verification
+       |             |
+       +-------------+
+              |
+              v
+       Phase 11 Verification
+           (Planned)
+```
+
+A central design principle is that **recovered evidence is not automatically accepted as sufficient evidence**.
+
+The original retrieval results remain available throughout recovery so the system can reject an unsuccessful candidate without losing the initial evidence.
+
+---
+
+## Phase 10.1 — Recovery State Representation
+
+### Status: Complete
+
+The first stage defines explicit recovery contracts so different interventions can be executed through a common interface.
+
+The implementation is located in:
+
+```text
+src/recovery/states.py
+```
+
+The recovery system defines the following actions:
+
+```text
+NONE
+EXPANDED_CANDIDATE_RETRIEVAL
+QUERY_REFORMULATION
+MULTI_QUERY_RETRIEVAL
+```
+
+Recovery execution also has explicit statuses:
+
+```text
+NOT_ATTEMPTED
+COMPLETED
+FAILED
+```
+
+The primary objects are:
+
+```text
+RecoveryRequest
+    |
+    +-- original_query
+    +-- action
+    +-- original_results
+    +-- metadata
+
+RecoveryResult
+    |
+    +-- action
+    +-- status
+    +-- original_query
+    +-- recovery_queries
+    +-- original_results
+    +-- recovered_results
+    +-- error_message
+    +-- metadata
+```
+
+This representation separates the recovery request from the evidence produced by the intervention.
+
+Importantly:
+
+```text
+RecoveryStatus.COMPLETED
+```
+
+means that the intervention executed successfully.
+
+It does **not** mean that the intervention recovered all required evidence.
+
+This distinction is necessary because retrieval success, evidence completeness, and answer correctness are different evaluation objectives.
+
+---
+
+## Phase 10.2 — Expanded Candidate Retrieval
+
+### Status: Complete
+
+The first recovery intervention investigates whether incomplete evidence can be recovered by expanding the retrieval candidate pool.
+
+The original retrieval baseline uses:
+
+```text
+Dense@20
+    +
+BM25@20
+    |
+    v
+Candidate Union
+    |
+    v
+Cross-Encoder
+    |
+    v
+Top 10
+```
+
+Expanded candidate retrieval increases the candidate depth:
+
+```text
+Dense@100
+    +
+BM25@100
+    |
+    v
+Expanded Candidate Union
+    |
+    v
+Cross-Encoder
+    |
+    v
+Top 10
+```
+
+The purpose is to distinguish two failure mechanisms:
+
+```text
+Candidate-generation failure
+    |
+    | Required evidence never entered
+    | the retrieval candidate pool.
+    v
+Expand retrieval depth
+```
+
+and:
+
+```text
+Final-ranking failure
+    |
+    | Required evidence entered the pool
+    | but was excluded from the final Top 10.
+    v
+Improve evidence selection
+```
+
+### Experimental finding
+
+Expanded candidate retrieval produced modest improvements on the tested validation examples.
+
+However, increasing candidate depth did not consistently recover all missing evidence.
+
+Some required facts were present in the expanded candidate pool but were still excluded from the final evidence set.
+
+This indicates that candidate expansion alone is not sufficient.
+
+A recovery system must also consider **how evidence is selected for the final context**.
+
+Implementation:
+
+```text
+src/recovery/expanded_candidates.py
+```
+
+Related evaluation:
+
+```powershell
+python -m scripts.test_expanded_candidate_recovery
+python -m scripts.evaluate_expanded_candidate_recovery
+python -m scripts.analyze_expanded_candidate_residuals
+```
+
+---
+
+## Phase 10.3 — Evidence-Conditioned Multi-Hop Recovery
+
+### Status: Complete
+
+The next intervention investigates whether a second retrieval step can recover evidence missing from the original retrieval results.
+
+This is particularly important for HotpotQA questions that require connecting information across multiple documents.
+
+Conceptually:
+
+```text
+Original Question
+       |
+       v
+First-Hop Retrieval
+       |
+       v
+Inspect Retrieved Evidence
+       |
+       v
+Extract Candidate Entities
+       |
+       v
+Select Potential Bridge
+       |
+       v
+Generate Relation Query
+       |
+       v
+Second-Hop Retrieval
+       |
+       v
+Recovered Evidence
+```
+
+The system uses the retrieved passages as evidence for constructing a second retrieval query.
+
+The recovery process must operate without knowing which entity or document is correct according to HotpotQA supporting-fact annotations.
+
+### Entity extraction
+
+The current implementation uses:
+
+```text
+dslim/bert-base-NER
+```
+
+Named entities are extracted from the first-hop retrieved passages.
+
+The experiments also investigate:
+
+- candidate aggregation,
+- entity deduplication,
+- passage-balanced candidate selection,
+- and bridge-entity selection.
+
+The current recovery configuration inspects the first three retrieved passages and limits the number of entity candidates considered from each source.
+
+This prevents a single passage with many recognized entities from dominating candidate selection.
+
+### Bridge selection
+
+A bridge entity is a potential connection between the original question, the first-hop evidence, and another relevant source.
+
+For example:
+
+```text
+Question
+   |
+   v
+Document A
+   |
+   | Mentions Entity B
+   v
+Bridge Entity B
+   |
+   v
+Document B
+   |
+   v
+Missing Evidence
+```
+
+The bridge is selected using observable query and passage information.
+
+Gold supporting documents are not supplied to the runtime bridge selector.
+
+### Relation-query generation
+
+The current implementation experiments with:
+
+```text
+Qwen2.5-1.5B-Instruct
+```
+
+The model generates a constrained second-hop retrieval query from the original question and the selected bridge candidate.
+
+The implementation uses CPU inference for local experimentation.
+
+The generated query is checked for structural validity before being used for retrieval.
+
+A structurally valid query is not necessarily semantically correct.
+
+### Experimental findings
+
+Initial real-retrieval experiments on 10 oracle-selected incomplete validation questions showed:
+
+```text
+Questions evaluated:          10
+Complete evidence repairs:     2
+```
+
+An offline expected-bridge diagnostic recovered four of six eligible cases.
+
+The expected-bridge experiment uses benchmark knowledge for diagnostic analysis and is **not a deployable runtime result**.
+
+These experiments revealed that second-hop recovery is sensitive to:
+
+- entity extraction quality,
+- bridge selection,
+- relation-query generation,
+- and final evidence selection.
+
+The broader validation experiments subsequently found that generated bridge queries were structurally valid in only 26 of 50 evaluated cases.
+
+This limits the reliability of the current second-hop intervention.
+
+Implementation includes:
+
+```text
+src/recovery/entity_extraction.py
+src/recovery/bridge_selection.py
+src/recovery/llm_bridge_selection.py
+src/recovery/bridge_query.py
+src/recovery/relation_query.py
+src/recovery/qwen_generator.py
+src/recovery/multi_query.py
+src/recovery/second_hop.py
+```
+
+Representative tests:
+
+```powershell
+python -m scripts.test_entity_extraction
+python -m scripts.test_bridge_selection
+python -m scripts.test_bridge_query
+python -m scripts.test_relation_query
+python -m scripts.test_second_hop
+```
+
+The goal of this stage is not to assume that language-model-generated queries are reliable.
+
+Instead, the project evaluates whether evidence-conditioned retrieval produces additional useful evidence and identifies where the recovery process fails.
+
+---
+
+## Phase 10.4 — Evidence-Preserving Selection
+
+### Status: Complete
+
+Second-hop retrieval introduces a new problem.
+
+The system now has two evidence lists:
+
+```text
+Original Evidence
+       +
+Recovered Evidence
+```
+
+Simply combining these lists does not guarantee better evidence coverage.
+
+The final context has a limited number of passages.
+
+Adding new evidence can displace useful original evidence.
+
+This creates a potential recovery regression:
+
+```text
+Original Top 10
+    |
+    | Contains useful supporting fact
+    v
+Recovery
+    |
+    v
+New Top 10
+    |
+    | Original supporting fact removed
+    v
+Evidence Regression
+```
+
+To investigate this problem, Phase 10 introduces an evidence-preserving selection strategy.
+
+Implementation:
+
+```text
+src/recovery/evidence_selection.py
+```
+
+### Balanced evidence selection
+
+The primary experimental configuration uses:
+
+```text
+Final evidence budget:      10
+
+Reserved first-hop slots:    5
+Reserved second-hop slots:   5
+```
+
+Conceptually:
+
+```text
+First-Hop Evidence
+       |
+       +---- Top 5 ----+
+                     |
+                     v
+                Final Top 10
+                     ^
+                     |
+       +---- Top 5 ----+
+       |
+Second-Hop Evidence
+```
+
+The selector also:
+
+- deduplicates repeated chunks,
+- tracks first-hop and second-hop ranks,
+- identifies chunks appearing in both lists,
+- fills unused slots when one list has fewer candidates,
+- and preserves evidence-source provenance.
+
+The provenance states are:
+
+```text
+FIRST_HOP
+SECOND_HOP
+BOTH
+```
+
+Raw retrieval scores from different queries are not directly compared because they are not necessarily on a common scale.
+
+### Phase 10.4E — Broader evidence-selection evaluation
+
+A broader diagnostic experiment evaluated 50 HotpotQA validation questions.
+
+Recovery was deliberately attempted on the evaluation examples to study evidence-selection behavior.
+
+**This is a forced-recovery experiment, not an evaluation of the runtime detector's routing policy.**
+
+The following results were observed:
+
+| Evidence-selection policy | Evidence Recall@10 | Complete Evidence@10 |
+|---|---:|---:|
+| Original first-hop Top 10 | 0.8305 | 33 / 50 |
+| Naive union selection | 0.8305 | 33 / 50 |
+| Balanced 5/5 | 0.8729 | 38 / 50 |
+| Balanced 7/3 | 0.8559 | 36 / 50 |
+| Balanced 3/7 | 0.8729 | 38 / 50 |
+| Combined-pool cross-encoder | 0.8559 | 34 / 50 |
+
+The balanced 5/5 policy produced:
+
+```text
+Original complete questions:       33 / 50
+
+Balanced 5/5 complete questions:   38 / 50
+
+Incomplete-to-complete repairs:     5
+
+Complete-to-incomplete losses:      0
+
+Net improvement:                   +5
+```
+
+The balanced 3/7 policy achieved the same aggregate evidence recall and complete-evidence count on this sample.
+
+Therefore, the experiment does not establish that 5/5 is universally superior.
+
+The 5/5 configuration was retained as the current balanced research baseline.
+
+### Interpretation
+
+These results demonstrate that evidence-selection policy can materially affect the outcome of recovery.
+
+The balanced strategies recovered additional annotated supporting facts that were not present in the original final context.
+
+However, the absence of complete-to-incomplete regressions in 50 examples does not guarantee that future recovery candidates cannot lose useful evidence.
+
+In particular, reserving first-hop slots does not preserve every original Top-10 passage.
+
+This motivates an independent post-recovery verification stage.
+
+Experiment documentation:
+
+```text
+docs/experiments/phase_10_4_evidence_selection.md
+docs/experiments/phase_10_4e_results.csv
+```
+
+Evaluation command:
+
+```powershell
+python -m scripts.evaluate_broad_evidence_selection
+```
+
+---
+
+## Phase 10.5 — Runtime Recovery Controller
+
+### Status: Complete
+
+Earlier Phase 10 experiments investigated whether recovery interventions could improve evidence coverage.
+
+However, a deployable recovery system cannot use HotpotQA gold labels to decide which questions require recovery.
+
+Phase 10.5 connects the frozen Phase 9 runtime detector to the recovery controller.
+
+The resulting architecture is:
+
+```text
+Original Query
+      |
+      v
+Initial Retrieval
+      |
+      v
+Original Top 10
+      |
+      v
+Runtime Feature Extraction
+      |
+      v
+Frozen Sufficiency Detector
+      |
+      v
+Recovery Recommendation
+      |
+      v
+Recovery Controller
+      |
+      +--> Keep Original
+      |
+      +--> Attempt Recovery
+```
+
+The controller uses the predicted sufficiency result rather than an oracle failure label.
+
+### Phase 9 detector used by the controller
+
+The frozen detector uses:
+
+```text
+Model:
+Balanced Logistic Regression
+
+Preprocessing:
+Median Imputation
+Standard Scaling
+
+Feature count:
+29
+
+Retrieval-derived features:
+19
+
+Lexical evidence features:
+10
+
+Sufficiency threshold:
+0.58
+```
+
+The detector predicts whether the retrieved evidence is likely to be sufficient.
+
+It does not provide reliable fine-grained runtime attribution of every failure type.
+
+Therefore, the current controller primarily distinguishes:
+
+```text
+Predicted sufficient
+        |
+        v
+Keep original evidence
+```
+
+from:
+
+```text
+Predicted insufficient
+        |
+        v
+Attempt recovery
+```
+
+The detector threshold is frozen and is not retuned on the held-out test set.
+
+### Held-out detector evaluation
+
+The Phase 9 detector was evaluated on 500 held-out test questions.
+
+```text
+Test questions:                    500
+
+Accuracy:                         0.6640
+
+Balanced accuracy:                0.6867
+
+Insufficient-class precision:     0.4217
+
+Insufficient-class recall:        0.7348
+
+Insufficient-class F1:            0.5359
+
+Recovery recommendations:         230 / 500
+```
+
+The detector is intentionally treated as imperfect.
+
+False recovery recommendations introduce unnecessary computation and can expose originally sufficient questions to potential evidence loss.
+
+Missed insufficient cases prevent the controller from attempting recovery when additional evidence may be needed.
+
+These limitations must be considered when evaluating the complete recovery pipeline.
+
+### Phase 10.5A — Controller contracts
+
+Implementation:
+
+```text
+src/recovery/controller.py
+```
+
+The controller defines:
+
+```text
+ControllerDecision
+    |
+    +-- KEEP_ORIGINAL
+    +-- ATTEMPT_RECOVERY
+```
+
+and:
+
+```text
+ControllerOutcome
+    |
+    +-- ORIGINAL_ACCEPTED
+    +-- RECOVERY_PENDING_VERIFICATION
+    +-- RECOVERY_FALLBACK
+```
+
+The controller receives:
+
+```text
+Original Query
+Original Results
+Runtime Diagnosis
+```
+
+It then decides whether to execute the configured recovery intervention.
+
+A completed intervention with nonempty recovered results produces:
+
+```text
+RECOVERY_PENDING_VERIFICATION
+```
+
+It does not immediately replace the original evidence.
+
+The controller falls back to the original evidence when:
+
+- recovery execution fails,
+- the recovery result is empty,
+- the executor raises an exception,
+- or the returned recovery metadata violates expected provenance.
+
+Controller tests:
+
+```powershell
+python -m scripts.test_recovery_controller
+```
+
+### Phase 10.5B — Runtime integration
+
+Implementation:
+
+```text
+src/recovery/runtime_integration.py
+```
+
+This module connects:
+
+```text
+Retrieved Results
+      |
+      v
+Feature Extraction
+      |
+      v
+Runtime Diagnosis
+      |
+      v
+Recovery Controller
+```
+
+The integration constructs the same 29-feature representation used by the frozen detector.
+
+It checks feature names and prevents accidental feature collisions.
+
+The integrated result preserves:
+
+```text
+Feature Row
+Runtime Diagnosis
+Controller Result
+```
+
+This makes it possible to inspect the detector inputs and controller decisions separately.
+
+Tests:
+
+```powershell
+python -m scripts.test_runtime_integration
+```
+
+### Phase 10.5C — Real feature-parity validation
+
+A critical requirement is that runtime feature extraction must reproduce the feature representation used during detector development.
+
+Otherwise, a detector that performs well on an offline feature table may behave differently during real retrieval.
+
+The feature-parity experiment reran the retrieval pipeline on validation questions and compared runtime-generated features against the stored diagnostic features.
+
+Results:
+
+```text
+Validation questions:        50
+
+Features per question:       29
+
+Feature comparisons:       1450
+
+Matching comparisons:      1450
+
+Mismatches:                   0
+```
+
+Therefore:
+
+```text
+Runtime feature parity: 1450 / 1450
+```
+
+This confirms exact feature-value agreement for the tested validation examples.
+
+It does not establish that the detector's predictions are always correct.
+
+Validation command:
+
+```powershell
+python -m scripts.test_real_feature_parity --max-questions 50
+```
+
+### Phase 10.5D — Real controller-routing validation
+
+The next experiment executed the runtime diagnosis and controller-routing path on 50 validation questions.
+
+The experiment used real retrieval results and the frozen detector.
+
+A deterministic recovery probe was used to validate routing behavior.
+
+**The experiment did not execute the full Qwen-based recovery intervention and therefore does not measure real end-to-end recovery quality.**
+
+Results:
+
+```text
+Questions evaluated:              50
+
+Correct routing decisions:        34
+
+Routing accuracy:               68%
+
+Recovery recommendations:         21
+
+Original evidence retained:       29
+
+False recovery recommendations:   10
+
+Missed insufficient cases:         6
+```
+
+Confusion breakdown:
+
+| Oracle evidence state | Keep original | Attempt recovery |
+|---|---:|---:|
+| Sufficient | 23 | 10 |
+| Insufficient | 6 | 11 |
+
+This means:
+
+```text
+Correct keep decisions:       23
+
+Correct recovery decisions:   11
+
+False recovery flags:         10
+
+Missed recovery cases:         6
+```
+
+The experiment confirms that the frozen runtime detector can be connected to the recovery controller without relying on oracle labels for runtime routing.
+
+It also demonstrates that the controller makes imperfect decisions.
+
+The false recovery and missed recovery cases are important targets for subsequent end-to-end evaluation.
+
+Validation command:
+
+```powershell
+python -m scripts.test_real_controller_routing --max-questions 50
+```
+
+---
+
+## Phase 10.6 — Recovery Candidate Handoff
+
+### Status: Complete
+
+The final Phase 10 stage connects controller decisions to the evidence-selection module.
+
+Implementation:
+
+```text
+src/recovery/recovery_handoff.py
+```
+
+The purpose is to prepare a recovery candidate for future verification without prematurely replacing the original evidence.
+
+The handoff receives:
+
+```text
+ControllerResult
+```
+
+and produces:
+
+```text
+RecoveryHandoff
+    |
+    +-- original_results
+    +-- selection
+    +-- pending_verification
+    +-- reason
+```
+
+When the controller keeps the original evidence or falls back after unsuccessful recovery, no verification candidate is created.
+
+When recovery completes successfully and produces nonempty evidence, the handoff invokes the evidence selector.
+
+The current selection policy uses the balanced 5/5 configuration.
+
+The selected evidence is returned as a candidate with explicit provenance.
+
+### Safety conditions
+
+The handoff enforces several invariants:
+
+1. The controller must not modify the original evidence before verification.
+2. Pending recovery must contain a completed, nonempty recovery result.
+3. The recovery result must refer to the same original evidence.
+4. Evidence selection must produce a nonempty candidate.
+5. Candidate preparation must not imply verified sufficiency.
+
+Conceptually:
+
+```text
+Controller Result
+       |
+       v
+Recovery Handoff
+       |
+       +--> No Recovery
+       |         |
+       |         v
+       |    Original Evidence
+       |
+       +--> Recovery Candidate
+                 |
+                 v
+          Evidence Selection
+                 |
+                 v
+          Candidate Evidence
+                 |
+                 v
+          Pending Verification
+```
+
+The original evidence remains available as the fallback.
+
+### Validation
+
+The recovery-handoff tests cover:
+
+```text
+No recovery produces no verification candidate
+
+Balanced 5/5 selection retains provenance
+
+Premature evidence replacement is rejected
+
+Mismatched recovery provenance is rejected
+```
+
+All four tests passed.
+
+```text
+PHASE 10.6 RECOVERY HANDOFF TESTS PASSED
+```
+
+Validation command:
+
+```powershell
+python -m scripts.test_recovery_handoff
+```
+
+This establishes a controlled boundary between recovery execution and post-recovery verification.
+
+---
+
+## Phase 10 — Research Findings
+
+The Phase 10 experiments support several observations.
+
+### 1. Increasing retrieval depth does not guarantee complete evidence
+
+Expanded candidate retrieval can expose additional evidence, but the final ranking stage may still exclude required supporting facts.
+
+Candidate generation and final evidence selection must therefore be evaluated separately.
+
+### 2. Multi-hop recovery depends on intermediate decisions
+
+Evidence-conditioned second-hop retrieval requires successful entity extraction, bridge selection, and relation-query generation.
+
+An error in any of these stages can prevent recovery from reaching the missing evidence.
+
+### 3. Evidence-selection policy affects recovery quality
+
+On the 50-question forced-recovery validation experiment, balanced 5/5 selection increased complete evidence coverage from:
+
+```text
+33 / 50
+```
+
+to:
+
+```text
+38 / 50
+```
+
+This is an improvement in annotated evidence completeness on the tested sample, not proof of improved answer accuracy.
+
+### 4. Runtime recovery routing is imperfect
+
+The frozen detector correctly routed 34 of 50 validation questions in the controller-routing experiment.
+
+The remaining cases included both unnecessary recovery recommendations and missed insufficient-evidence cases.
+
+This confirms that recovery quality must be evaluated together with detector quality.
+
+### 5. Successful recovery execution is not verified evidence repair
+
+A recovery intervention can complete successfully while returning irrelevant, redundant, or incomplete evidence.
+
+The implementation therefore distinguishes:
+
+```text
+Recovery Executed
+```
+
+from:
+
+```text
+Recovery Candidate Prepared
+```
+
+and:
+
+```text
+Recovery Verified
+```
+
+The third stage remains future work.
+
+### 6. Original evidence must remain available
+
+Replacing the original evidence immediately after recovery creates the possibility of losing useful supporting facts.
+
+Phase 10 preserves the original retrieval results and makes recovered evidence provisional until verification.
+
+---
+
+## Phase 10 — Current Limitations
+
+### Runtime failure attribution
+
+The current detector predicts evidence sufficiency rather than reliably identifying every fine-grained retrieval failure type.
+
+The recovery controller therefore does not yet implement a fully validated failure-type-specific intervention policy.
+
+### Query-generation reliability
+
+The second-hop query-generation pipeline remains sensitive to bridge selection and generated-query validity.
+
+In the broader 50-question experiment, 24 cases did not produce structurally valid second-hop retrieval queries.
+
+### Limited recovery evaluation
+
+The broad evidence-selection experiment evaluates 50 validation questions under forced recovery.
+
+These results should not be interpreted as final held-out benchmark performance or as a measurement of the deployed controller's complete recovery behavior.
+
+### Evidence-selection regressions
+
+Balanced selection reserves slots for both retrieval hops but does not guarantee preservation of every original supporting fact.
+
+A larger evaluation may reveal regressions not observed in the current sample.
+
+### Detector errors
+
+The frozen runtime detector produces false recovery recommendations and misses some insufficient-evidence cases.
+
+These errors affect both computational cost and potential recovery benefit.
+
+### Post-recovery verification
+
+Phase 10 prepares recovery candidates but does not yet independently determine whether the recovered evidence is sufficient.
+
+The current controller must not interpret:
+
+```text
+RECOVERY_PENDING_VERIFICATION
+```
+
+as successful evidence repair.
+
+### Answer-level evaluation
+
+The current experiments primarily measure retrieval behavior and HotpotQA annotated supporting-fact coverage.
+
+They do not yet establish improvements in:
+
+- final answer accuracy,
+- citation correctness,
+- answer faithfulness,
+- hallucination reduction,
+- abstention quality,
+- or end-to-end latency and computational cost.
+
+---
+
+## Phase 10 — Repository Structure
+
+The recovery implementation is organized under:
+
+```text
+src/recovery/
+    |
+    +-- __init__.py
+    |
+    +-- states.py
+    +-- expanded_candidates.py
+    +-- entity_extraction.py
+    +-- bridge_selection.py
+    +-- llm_bridge_selection.py
+    +-- bridge_query.py
+    +-- relation_query.py
+    +-- qwen_generator.py
+    +-- multi_query.py
+    +-- second_hop.py
+    |
+    +-- evidence_selection.py
+    |
+    +-- controller.py
+    +-- runtime_integration.py
+    +-- recovery_handoff.py
+```
+
+The associated experiment documentation is stored in:
+
+```text
+docs/experiments/
+    |
+    +-- phase_10_4_evidence_selection.md
+    +-- phase_10_4e_results.csv
+```
+
+The repository also contains separate scripts for component tests, recovery experiments, runtime feature-parity validation, and controller-routing evaluation.
+
+---
+
+## Phase 10 — Reproducibility
+
+Commands should be executed from the repository root with the virtual environment activated.
+
+### Recovery state and interventions
+
+```powershell
+python -m scripts.test_recovery_states
+python -m scripts.test_expanded_candidate_recovery
+python -m scripts.test_entity_extraction
+python -m scripts.test_bridge_selection
+python -m scripts.test_bridge_query
+python -m scripts.test_relation_query
+python -m scripts.test_second_hop
+```
+
+### Evidence selection
+
+```powershell
+python -m scripts.test_evidence_selection
+python -m scripts.test_selection_policies
+python -m scripts.evaluate_broad_evidence_selection
+```
+
+### Controller integration
+
+```powershell
+python -m scripts.test_recovery_controller
+python -m scripts.test_runtime_integration
+```
+
+### Real feature-parity validation
+
+```powershell
+python -m scripts.test_real_feature_parity --max-questions 50
+```
+
+### Real controller-routing validation
+
+```powershell
+python -m scripts.test_real_controller_routing --max-questions 50
+```
+
+### Recovery handoff
+
+```powershell
+python -m scripts.test_recovery_handoff
+```
+
+Some experiments load Hugging Face models and perform CPU-based language-model inference.
+
+Consequently, execution time and resource requirements vary substantially between unit tests and full recovery evaluations.
+
+---
+
+## Phase 10 — Conclusion
+
+Phase 10 establishes the recovery foundation required to investigate adaptive evidence repair.
+
+The project now supports:
+
+```text
+Initial Retrieval
+       |
+       v
+Runtime Sufficiency Detection
+       |
+       v
+Recovery Decision
+       |
+       v
+Recovery Intervention
+       |
+       v
+Evidence-Preserving Selection
+       |
+       v
+Recovery Candidate Handoff
+```
+
+The experiments demonstrate that additional retrieval and evidence-selection strategies can improve annotated supporting-fact coverage on selected validation examples.
+
+However, the current results do not yet establish that a complete detector-triggered recovery system consistently improves evidence sufficiency or final answer quality.
+
+The next stage is:
+
+**Phase 11 — Post-Recovery Evidence Verification**
+
+Phase 11 will investigate whether a recovery candidate can be accepted, rejected, or marked uncertain using inference-time evidence signals without accessing benchmark gold labels.
+
+It will also evaluate recovery repairs and regressions against HotpotQA supporting facts offline.
+
+The central research objective remains:
+
+> **Detect retrieval insufficiency, recover missing evidence when appropriate, and verify whether the intervention actually improved the evidence before proceeding to answer generation.**
+
 ---
 
 # Author
