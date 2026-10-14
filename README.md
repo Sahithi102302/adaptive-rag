@@ -2969,6 +2969,289 @@ The central research objective remains:
 
 ---
 
+
+# Phase 11 — Post-Recovery Evidence Verification
+
+## Status: Research Implementation and Diagnostic Validation
+
+Phase 11 investigates whether recovery candidates can be evaluated
+using evidence and question-level requirements rather than relying
+only on retrieval relevance scores.
+
+The implementation includes post-recovery verification contracts,
+question-requirement representations, decomposition diagnostics,
+constraint detection, and conservative comparison mechanisms.
+
+These components do not collectively establish a fully validated
+end-to-end semantic verification system.
+
+## Verification Contracts
+
+The post-recovery verification contract represents three decisions:
+
+- ACCEPT
+- REJECT
+- UNCERTAIN
+
+It also distinguishes evaluated from unevaluated candidates.
+
+Structural safeguards prevent unevaluated candidates from being
+accepted or rejected and prevent acceptance of empty candidate results.
+
+These safeguards validate state consistency. They do not independently
+establish evidence sufficiency or semantic correctness.
+
+## Question Requirements and Decomposition
+
+Phase 11 introduces explicit relationship representations to support
+analysis of multi-hop question requirements.
+
+The research distinguishes:
+
+- Structural validity of a relationship representation.
+- Coverage of required relationships.
+- Semantic fidelity to the original question.
+- Evidence grounding for proposed relationships.
+
+A structurally valid decomposition may still omit, reverse, or
+misinterpret relationships and constraints.
+
+The specialized semantic checks implemented during Phase 11 are
+not general-purpose natural-language entailment verifiers.
+
+## Constraint Diagnostics
+
+The constraint-diagnostic layer contains:
+
+1. QuestionConstraintInventory
+   - Detects surface signals for negation, temporal conditions,
+     comparisons, superlatives, uncertainty, and contextual phrases.
+   - Preserves character offsets.
+
+2. ConstraintSignalReviewer
+   - Annotates selected potentially ambiguous surface signals.
+   - Does not discard the original signals.
+
+3. ConstraintPreservationAuditor
+   - Reports lexical presence, absence, or unresolved ambiguity.
+   - Does not infer semantic preservation.
+
+4. ConstraintAttachmentSet
+   - Represents constraints attached to explicit relationships.
+   - Validates relationship references and constraint identifiers.
+
+5. ConstraintAttachmentComparator
+   - Compares reference and proposed attachment sets.
+   - Requires identical question requirements and stable
+     constraint identifiers.
+
+6. ConstraintComparisonInterpreter
+   - Distinguishes observed agreement, observed disagreement,
+     and insufficient reference information.
+   - Does not authorize decomposition acceptance.
+
+## Constraint-Diagnostic Evaluation
+
+On a previously inspected HotpotQA validation development slice
+(indices 300–799):
+
+- Questions evaluated: 500
+- Original surface signals: 211
+- Reviewed surface signals: 211
+- Questions with ambiguity warnings: 3
+
+The three warnings corresponded to:
+
+- "May" used as a calendar month.
+- "Greater" used in a geographic name.
+- "older" used as a family-relation modifier.
+
+These examples had already been inspected during development.
+The audit is therefore diagnostic regression evidence, not an
+independent held-out estimate of ambiguity-detection accuracy.
+
+## Synthetic Validation
+
+The constraint-diagnostic regression suite contains nine test
+scripts and 48 individual tests.
+
+All 48 tests passed during the Phase 11 consolidation review.
+
+The Phase 11.1 verification contract additionally passed five
+targeted structural tests.
+
+These results validate expected implementation behavior for the
+tested cases, including deliberately adversarial examples.
+They do not establish general semantic verification accuracy.
+
+## Reproducibility
+
+Run the constraint-diagnostic tests from the repository root:
+
+```powershell
+python -m scripts.test_question_constraint_inventory
+python -m scripts.test_constraint_signal_review
+python -m scripts.test_constraint_preservation_audit
+python -m scripts.test_constraint_preservation_adversarial
+python -m scripts.test_constraint_attachment
+python -m scripts.test_constraint_attachment_adversarial
+python -m scripts.test_constraint_attachment_comparator
+python -m scripts.test_constraint_attachment_comparator_boundaries
+python -m scripts.test_constraint_comparison_interpreter
+```
+
+Run the verification contract tests:
+
+```powershell
+python -m scripts.test_recovery_verification
+```
+
+Run the HotpotQA constraint audits:
+
+```powershell
+python -m scripts.audit_question_constraints_hotpotqa
+python -m scripts.audit_constraint_signal_review_hotpotqa
+```
+
+The HotpotQA audits may require downloading the dataset through
+Hugging Face Datasets.
+
+
+## Additional Phase 11 Diagnostic Findings
+
+The following experiments examine decomposition safety, conservative
+fallback behavior, and title-boundary extraction.
+
+These are targeted development diagnostics. Their results should
+not be interpreted as population-level accuracy estimates.
+
+### Hybrid semantic routing
+
+On a 30-case diagnostic set:
+
+- Supported cases: 15
+- Unsupported cases: 15
+- Supported cases accepted: 10
+- Supported cases abstained: 5
+- Unsupported cases accepted: 0
+- Unsupported cases rejected: 2
+- Unsupported cases abstained: 13
+
+The router achieved zero unsupported acceptances on this selected
+set, but abstained on five supported cases.
+
+Its acceptance behavior is limited to the implemented semantic
+grammar and does not establish general semantic equivalence.
+
+### Conservative fallback eligibility
+
+Among 18 hybrid-router abstentions:
+
+- Supported abstentions: 5
+- Unsupported abstentions: 13
+- Supported cases marked as fallback candidates: 5
+- Unsupported cases marked as fallback candidates: 0
+- Unsupported cases blocked: 12
+- Unsupported cases unresolved: 1
+
+Fallback eligibility identifies candidates for further review.
+It does not authorize automatic acceptance.
+
+### Entity-boundary safety
+
+A separate 20-case targeted diagnostic produced:
+
+- Supported cases: 10
+- Unsupported cases: 10
+- Supported fallback candidates: 1
+- Supported cases blocked: 9
+- Unsupported fallback candidates: 0
+- Unsupported cases blocked: 9
+- Unsupported cases unresolved: 1
+
+This result demonstrates a substantial coverage limitation:
+only one of ten supported cases remained eligible.
+
+The absence of unsafe candidates on this small set should not
+be generalized to unseen questions.
+
+### Title-boundary extraction
+
+An earlier 15-case development diagnostic reported:
+
+- Passed cases: 7
+- Failed cases: 8
+- Wrong title spans: 6
+- Unresolved expected titles: 1
+- Unexpected spans: 1
+
+After subsequent extractor revisions, a 15-case targeted
+boundary-safety diagnostic reported:
+
+- Exact title matches: 12
+- Correct abstentions: 2
+- Wrong spans: 0
+- Unresolved expected titles: 1
+- Unexpected spans: 0
+- Unsafe extractions: 0
+
+These results document the development progression from
+incorrect boundary extraction toward conservative abstention.
+
+Because these are targeted development cases, the comparison
+does not establish improvement on an independent held-out set.
+
+### Saved Qwen proposal regression
+
+A 16-case saved-proposal regression reported:
+
+- Correct supported proposals: 9/9
+- Correct rejections: 7/7
+- False acceptances: 0
+
+The proposals were saved model outputs reused for regression
+testing, not newly generated held-out model responses.
+
+These findings motivate further evaluation using independent
+question samples, validated references, and evidence-grounded
+semantic checks.
+
+## Research Limitations
+
+The current implementation has several important limitations:
+
+- Surface-pattern detection does not establish semantic meaning.
+- Lexical presence does not prove constraint preservation.
+- Lexical absence does not prove semantic omission.
+- Structurally valid attachments may represent incorrect semantics.
+- Agreement between two representations does not prove that either
+  accurately represents the original question.
+- Empty reference constraints cannot establish coverage.
+- Automatically generated references require independent validation.
+- Previously inspected development examples are not fresh held-out data.
+- Saved model outputs must not be presented as fresh inference results.
+- Diagnostic agreement does not establish answer-level correctness.
+
+The constraint-diagnostic components are not connected to automatic
+semantic acceptance.
+
+## Next Research Steps
+
+The remaining research work includes:
+
+- Broader regression validation of Phase 11 recovery components.
+- Independently validated question-requirement references.
+- Evaluation on genuinely untouched examples.
+- Relationship-direction and constraint-attachment verification.
+- Evidence-grounded semantic verification.
+- Measurement of recovery repairs and regressions.
+- End-to-end answer-quality evaluation.
+
+Phase 11 remains a research implementation with validated diagnostic
+components, not a completed general semantic verification system.
+
+---
+
 # Author
 
 **Sahithi Vankayala**

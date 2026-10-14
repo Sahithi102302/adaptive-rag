@@ -1,0 +1,4 @@
+position,status,original_gold,candidate_gold,gold_total,recovered,lost,originally_complete,candidate_complete,repaired,harmed,complete_to_incomplete,original_coverage,candidate_coverage,coverage_delta,gained_token_count,lost_token_count,new_document_count,retained_chunk_count,second_hop_count
+1,invalid_query_or_bridge,4,4,4,0,0,1,1,0,0,0,1.0,1.0,0.0,0,0,0,10,0
+2,retrieved,1,2,2,1,0,0,1,1,0,0,0.8571428571428571,0.8571428571428571,0.0,0,0,4,6,10
+3,retrieved,2,2,2,0,0,1,1,0,0,0,1.0,1.0,0.0,0,0,1,9,10
